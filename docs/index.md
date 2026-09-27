@@ -19,7 +19,7 @@ A companion to the EMBS module. Explore the principles of embedded systems, the 
 
 <div class="book-contents" markdown>
 
-## 0.Getting started
+## 0. Getting started
 
 - [Module overview](getting-started/overview.md) — Aims, learning outcomes, and module structure
 - [How to use this book](getting-started/how-to-use.md) — Navigation and conventions
@@ -51,7 +51,7 @@ A companion to the EMBS module. Explore the principles of embedded systems, the 
 
 - [Introduction](multicore-resource-sharing/introduction.md) — Priority inversion, resource access protocols, and multicore scheduling
 
-## 7. Interactive tutorials
+## Interactive tutorials
 
 - [Kernighan–Lin algorithm](tutorials/kl-algorithm.md) — Move nodes and step through graph partitioning
 - [Diffusion load balancing](tutorials/diffusion-algorithm.md) — Watch load flow between neighbouring nodes until it evens out
