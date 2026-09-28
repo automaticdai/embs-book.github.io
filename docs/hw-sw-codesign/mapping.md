@@ -1,10 +1,14 @@
 # Mapping
 
+*Lecture 10 · Platform-based Design and Mapping*
+
 ## Overview
 
 **Mapping** is the process of assigning partitioned tasks to specific resources on a target platform. While partitioning decides *what* goes to hardware vs software, mapping decides *where* on the platform each task executes.
 
-In **platform-based design**, the target architecture is a pre-existing platform with a fixed set of processing elements, memory, and communication infrastructure. The mapping step bridges the gap between an abstract partitioned specification and a concrete implementation on this platform.
+In **platform-based design**, the target architecture is selected from a reusable platform or a parameterised library of components. The mapping step bridges the application model and this platform model. Map communication as well as computation: tasks need paths through memories, buses or networks, with a resource-sharing policy for each shared element.
+
+The lecture distinguishes **allocation** (selecting resources), **binding** (assigning functions to them) and **scheduling** (deciding execution order and timing). These decisions interact and may need to be revisited together.
 
 ---
 
@@ -119,6 +123,39 @@ Mapping decides:
 - Communication: T2→T4 data transfer via shared memory or DMA
 
 The mapping must ensure that data dependencies are respected, communication latency is accounted for, and deadlines are met.
+
+## Hungarian algorithm: an exact assignment model
+
+For a one-to-one assignment of tasks to processing elements with independent costs, the Hungarian algorithm minimises the sum of selected costs. The lecture uses:
+
+| Task | PE1 | PE2 | PE3 | PE4 |
+|---|---:|---:|---:|---:|
+| T1 | 80 | 40 | 50 | 46 |
+| T2 | 40 | 70 | 20 | 25 |
+| T3 | 30 | 10 | 20 | 30 |
+| T4 | 35 | 20 | 25 | 30 |
+
+Subtract each row minimum, then each column minimum. Search for independent zeros: one per row and column. If there are too few, cover all zeros with a minimum set of rows/columns, subtract the smallest uncovered value from uncovered entries and add it at intersections of covering lines. Repeat until a complete zero assignment is available.
+
+An optimal assignment is T1→PE4, T2→PE3, T3→PE2, T4→PE1, costing $46+20+10+35=111$ in the original matrix. Choosing the cheapest entry separately in each row fails because several tasks want PE2.
+
+This solves the stated assignment problem. Pairwise communication costs, several tasks sharing one PE, or deadline interference require a richer model; they cannot be added merely by calling the same matrix result optimal.
+
+## Diffusion: redistribute load between neighbours
+
+For node loads $l_i^{(k)}$ and symmetric link weights $\alpha_{ij}$, a synchronous update is
+
+$$l_i^{(k+1)}=l_i^{(k)}+\sum_{j\in N(i)}\alpha_{ij}(l_j^{(k)}-l_i^{(k)}).$$
+
+Compute every transfer from the old load vector before updating any node. Symmetric transfers preserve total load. For a fixed, connected, undirected graph, a conservative uniform weight is $\alpha=1/(\Delta+1)$, where $\Delta$ is the maximum degree. The lecture also gives the local choice $\alpha_{ij}=1/(1+\max(\deg i,\deg j))$.
+
+For two connected nodes with loads 10 and 2 and weight $1/2$, one step produces 6 and 6. Real tasks are indivisible and migration has a cost, so a fractional load transfer may not have an exact task-level implementation. Balance alone also does not establish deadlines.
+
+Use the [diffusion tutorial](../tutorials/diffusion-algorithm.md) to explore convergence, then compare a proposed redistribution against the task and communication constraints.
+
+## Genetic mapping
+
+A chromosome can encode the processor assigned to each task. Selection, crossover and mutation generate new assignments, while evaluation measures latency, energy or other objectives. Reject or penalise infeasible assignments explicitly; a good average fitness does not establish a hard deadline guarantee. The lecture contrasts simulation-based evaluation with analytical timing tests.
 
 ---
 

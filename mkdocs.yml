@@ -82,22 +82,34 @@ nav:
   - Home: index.md
   - Getting Started:
     - Module Overview: getting-started/overview.md
+    - Lecture Guide: getting-started/lecture-guide.md
     - How to Use This Book: getting-started/how-to-use.md
   - Systems Design:
     - Introduction: embedded-systems-design/introduction.md
+    - FPGA Implementation: embedded-systems-design/fpga.md
   - Specification:
     - Introduction: specification/introduction.md
+    - Ptolemy II: specification/ptolemy.md
+    - Models of Computation: specification/models-of-computation.md
+    - KPN and Synchronous Dataflow: specification/dataflow.md
   - HW/SW Co-Design:
     - Introduction: hw-sw-codesign/introduction.md
     - Design Space Exploration: hw-sw-codesign/design-space-exploration.md
     - Partitioning: hw-sw-codesign/partitioning.md
     - Mapping: hw-sw-codesign/mapping.md
-  - RTOS:
+  - Software & RTOS:
+    - Embedded Software Design: rtos/embedded-software.md
     - Introduction: rtos/introduction.md
+    - FreeRTOS: rtos/freertos.md
   - Scheduling:
     - Introduction: real-time-scheduling/introduction.md
+    - Fixed-Priority Scheduling: real-time-scheduling/fixed-priority.md
+    - EDF and Processor Demand: real-time-scheduling/edf.md
   - Multicore:
     - Introduction: multicore-resource-sharing/introduction.md
+    - Resource Sharing: multicore-resource-sharing/resource-sharing.md
+    - Multicore Scheduling: multicore-resource-sharing/multicore.md
+    - Mixed-Criticality Systems: multicore-resource-sharing/mixed-criticality.md
   - Tutorials:
     - Kernighan–Lin Algorithm: tutorials/kl-algorithm.md
     - Diffusion Load Balancing: tutorials/diffusion-algorithm.md

@@ -1,8 +1,16 @@
-# Introduction to Multicore and Resource Sharing
+# Resource Sharing, Multicore and Mixed Criticality
+
+*Lectures 16–18 · Extending the real-time task model*
 
 ## Overview
 
-Real-time tasks rarely run in isolation. They share **resources** — data structures, peripherals, buses — and increasingly they run on **multicore** processors. Both introduce new sources of delay that schedulability analysis must account for.
+Real-time tasks rarely run in isolation. They share **resources** — data structures, peripherals, buses — and may run on **multicore** processors or provide services at different **criticality levels**. These extensions change the assumptions behind the basic timing tests.
+
+| Chapter | Main question |
+|---|---|
+| [Resource sharing](resource-sharing.md) | How much can a lower-priority lock holder delay a task? |
+| [Multicore scheduling](multicore.md) | Which core runs each job, and how does interference affect timing? |
+| [Mixed-criticality systems](mixed-criticality.md) | Which guarantees remain when execution exceeds a lower-assurance budget? |
 
 ---
 
@@ -10,7 +18,7 @@ Real-time tasks rarely run in isolation. They share **resources** — data struc
 
 Shared resources are protected by mutual exclusion, so a task may have to wait for a lower-priority task to release a resource. This is **blocking**.
 
-**Priority inversion** occurs when a high-priority task is blocked by a low-priority task holding a resource, and medium-priority tasks pre-empt the low-priority task. The high-priority task can then be delayed for an unbounded time.
+**Priority inversion** occurs when a high-priority task is delayed by lower-priority work, for example a task holding a required resource. Medium-priority tasks can further delay the holder. Without suitable arrival bounds or a resource protocol, the delay need not be bounded by the critical section's length.
 
 !!! example "Mars Pathfinder (1997)"
     The Mars Pathfinder lander suffered repeated system resets caused by priority inversion. The problem was fixed remotely by enabling priority inheritance on the affected mutex.
@@ -25,6 +33,8 @@ Shared resources are protected by mutual exclusion, so a task may have to wait f
 | **Priority Ceiling (PCP)** | Each resource has a ceiling equal to the highest priority of its users; locking is restricted by ceilings | Blocked at most once, deadlock-free |
 | **Immediate Ceiling (ICPP)** | A task's priority is raised to the resource ceiling as soon as it locks it | Same worst-case bound as PCP, simpler to implement |
 | **Stack Resource Policy (SRP)** | Pre-emption levels control when a task may start | Works with EDF, allows shared stacks |
+
+These properties require the protocol's single-processor assumptions and locking rules. The [resource-sharing chapter](resource-sharing.md) derives a ceiling blocking bound and explains why it differs from PIP.
 
 With a blocking term $B_i$, response-time analysis becomes:
 
@@ -58,5 +68,7 @@ Cores on the same chip also contend for **shared caches, memory buses, and inter
 
 ## Next Steps
 
+- Follow the [multicore worked examples](multicore.md) for the limits of global scheduling and partitioning
+- Explore [mixed-criticality budgets and mode changes](mixed-criticality.md)
 - Review single-core schedulability tests in [Real-Time Scheduling](../real-time-scheduling/introduction.md)
 - See how tasks are assigned to processing elements in [Mapping](../hw-sw-codesign/mapping.md)

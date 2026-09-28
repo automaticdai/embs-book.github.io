@@ -1,5 +1,7 @@
 # Introduction to HW/SW Co-Design
 
+*Lectures 8–9 · System Level Design; Co-design and Partitioning*
+
 ## What is HW/SW Co-Design?
 
 **Hardware/Software Co-Design** is a methodology for designing embedded systems where hardware and software components are developed concurrently, with the goal of optimising system performance, cost, and power consumption.
@@ -17,12 +19,14 @@ Each approach has distinct trade-offs:
 
 | Aspect | Hardware | Software |
 |--------|----------|----------|
-| **Performance** | High (parallel execution) | Lower (sequential execution) |
-| **Flexibility** | Low (fixed after fabrication) | High (reprogrammable) |
-| **Development Cost** | High | Lower |
-| **Unit Cost** | Lower at volume | Higher at volume |
-| **Power** | Can be optimised | Generally higher |
-| **Time-to-Market** | Longer | Shorter |
+| **Performance** | Custom parallel datapaths for selected operations | Depends on processor architecture, code and workload |
+| **Flexibility** | ASIC logic is fixed; FPGA logic can be reconfigured | Software can be replaced within platform constraints |
+| **Development cost** | Hardware design, verification and integration effort | Software development, validation and toolchain effort |
+| **Unit cost** | Depends on technology, volume and device resources | Depends on the processor, memory and other platform needs |
+| **Energy** | Specialisation can reduce energy per operation | Depends on execution time and processor power states |
+| **Time to market** | Influenced by synthesis, verification and fabrication | Influenced by reuse, integration and software complexity |
+
+These are design considerations, not universal rankings. A hardware accelerator that saves computation can still lose overall performance through transfers and synchronisation. Compare the complete implementation against the same requirements.
 
 ---
 

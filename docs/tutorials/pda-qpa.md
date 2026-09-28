@@ -20,7 +20,7 @@ For a task set with worst-case execution times $C_i$, periods $T_i$ and relative
 
 $$h(t) = \sum_{i:\, D_i \le t} \left( \left\lfloor \frac{t - D_i}{T_i} \right\rfloor + 1 \right) C_i$$
 
-A task set with utilisation $U < 1$ is schedulable under EDF if and only if $h(t) \le t$ for every absolute deadline $t < L$.
+For independent preemptible periodic/sporadic tasks on one processor, with no jitter or self-suspension and zero or safely modelled overhead, PDA checks $h(t)\le t$ at every candidate deadline $0<t\le L$, where $L$ is a valid analysis bound. The explorer generates task sets with $U<1$. See [EDF and processor demand](../real-time-scheduling/edf.md) for the bound assumptions and a worked lecture example.
 
 - **PDA** tests every absolute deadline in $(0, L]$ in increasing order.
 - **QPA** (Zhang & Burns, 2009) starts at $L$ and repeatedly sets $t \leftarrow h(t)$ while $h(t) < t$, jumping over deadlines that cannot fail. It usually needs far fewer evaluations.
@@ -48,6 +48,8 @@ The chart plots $h(t)$ against the line $y = t$. PDA testing points are shown as
 ---
 
 ## Key Observations
+
+This tutorial accompanies **lecture 15**. Work through the [three-task PDA/QPA example](../real-time-scheduling/edf.md#worked-example-from-the-lecture) before experimenting with larger sets.
 
 !!! example "Things to try"
     1. **Widen the period range** from narrow to extreme and watch the number of PDA testing points grow while QPA stays small.

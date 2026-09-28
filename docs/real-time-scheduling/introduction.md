@@ -1,5 +1,7 @@
 # Introduction to Real-Time Scheduling
 
+*Lecture 13 · Real-Time Systems; overview of lectures 14–15*
+
 ## What is Real-Time Scheduling?
 
 In a real-time system, correctness depends not only on the result of a computation but also on **when** it is produced. **Real-time scheduling** decides the order in which tasks execute so that every task meets its deadline, and **schedulability analysis** proves this before the system runs.
@@ -24,8 +26,25 @@ Each periodic or sporadic task $\tau_i$ is commonly described by:
 | $T_i$ | Period, or minimum inter-arrival time |
 | $D_i$ | Relative deadline |
 | $U_i = C_i / T_i$ | Utilisation |
+| $R_i$ | Worst-case response time, from release to completion |
+| $B_i$ | Bounded delay due to lower-priority blocking |
+| $J_i$ | Release jitter, when included by the analysis |
 
 Deadlines are **implicit** if $D_i = T_i$, **constrained** if $D_i \le T_i$, and **arbitrary** otherwise. The total utilisation is $U = \sum_i U_i$.
+
+A **task** describes a stream of executions; a **job** is one execution. A job released at $r_{i,k}$ has absolute deadline $r_{i,k}+D_i$. Periodic jobs have fixed spacing, sporadic jobs have a minimum spacing, and aperiodic arrivals have no inherent periodicity. A worst-case timing guarantee requires a bound on arrivals as well as execution costs.
+
+## Assumptions behind the basic tests
+
+The tests below concern independent tasks on a single processor with fully preemptive execution, known WCETs, no self-suspension and no release jitter. Overheads are ignored or safely included in the model. The basic response-time recurrence assumes constrained deadlines. Shared resources, multicore interference and mode changes need additional analysis.
+
+| Kind of test | Passing means | Failing means |
+|---|---|---|
+| Sufficient | Schedulability is established under the assumptions | Inconclusive |
+| Necessary | Inconclusive | The task set cannot satisfy the model's requirements |
+| Exact | Schedulable under the model | Unschedulable under the model |
+
+A sustainable guarantee remains valid when conditions improve in the ways allowed by its model, such as reduced execution costs. Always state the particular assumptions and changes involved.
 
 ---
 
@@ -37,8 +56,10 @@ Deadlines are **implicit** if $D_i = T_i$, **constrained** if $D_i \le T_i$, and
 | **Fixed-priority** | Assigned per task, offline | Rate Monotonic (RM), Deadline Monotonic (DM) |
 | **Dynamic-priority** | Assigned per job, at runtime | Earliest Deadline First (EDF) |
 
+Lecture 13 also introduces **Least Laxity First (LLF)**, where laxity is the time until the deadline minus the job's remaining execution, and **value-based scheduling**, which uses application value to guide decisions under overload. These policies answer different questions from a proof that all deadlines can be met.
+
 !!! info "Key Insight"
-    RM is optimal among fixed-priority policies for implicit deadlines, and DM for constrained deadlines. EDF is optimal on a single processor: if any policy can meet all deadlines, EDF can.
+    Under the independent preemptive single-processor model, RM is optimal among fixed-priority assignments for implicit deadlines, and DM for constrained deadlines. EDF is optimal for independent preemptible jobs on a single processor. These results do not automatically carry over to extended task models.
 
 ---
 
@@ -65,5 +86,7 @@ where $hp(i)$ is the set of higher-priority tasks. The task set is schedulable i
 
 ## Next Steps
 
+- Work through [fixed-priority response-time analysis and Audsley's priority assignment](fixed-priority.md)
+- Calculate [EDF demand bounds and compare PDA with QPA](edf.md)
 - See how tasks sharing resources affects these tests in [Multicore and Resource Sharing](../multicore-resource-sharing/introduction.md)
 - Review the kernel mechanisms that implement scheduling in [Real-Time Operating Systems](../rtos/introduction.md)

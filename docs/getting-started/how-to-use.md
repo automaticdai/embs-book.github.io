@@ -6,10 +6,17 @@ This book is designed as a companion resource for the EMBS module. Here's how to
 
 ## Navigation
 
+- Use the [lecture guide](lecture-guide.md) to find the reading and examples for lectures 0–18
 - Use the **sidebar** on the left to browse chapters and sections
 - Use the **search bar** at the top to find specific topics
 - Use the **table of contents** on the right to jump within a page
 - Toggle between **light and dark mode** using the icon in the header
+
+## Study a chapter
+
+Read the task or system assumptions before applying an equation. Work through the examples by hand, then expand the self-check answers. Distinguish a sufficient test's inconclusive failure from an exact test's rejection under its stated model.
+
+For design work, record a chain of evidence: requirement → model → implementation decision → analysis or measurement. The [FPGA chapter](../embedded-systems-design/fpga.md) shows how this connects to the practicals.
 
 ---
 

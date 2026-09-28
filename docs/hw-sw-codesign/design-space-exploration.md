@@ -1,5 +1,7 @@
 # Design Space Exploration
 
+*Lecture 8 · System Level Design*
+
 ## Overview
 
 **Design space exploration (DSE)** is the systematic process of evaluating alternative design choices to find solutions that best meet a set of objectives and constraints. In HW/SW co-design, the design space encompasses all possible combinations of partitioning, mapping, scheduling, and implementation decisions.
@@ -66,7 +68,22 @@ Cost
  +-----------------> Latency
 ```
 
-The designer then selects from the Pareto front based on application priorities and constraints.
+The designer then selects from the Pareto front based on application priorities and constraints. A candidate non-dominated within a sampled set is not necessarily Pareto-optimal in the entire design space.
+
+## Worked example: choose among feasible designs
+
+Suppose both latency and energy should be minimised. These are illustrative measurements for the same operation:
+
+| Candidate | Latency (ms) | Energy (mJ) | Status among these candidates |
+|---|---:|---:|---|
+| A | 8 | 4 | Non-dominated |
+| B | 6 | 5 | Non-dominated |
+| C | 9 | 6 | Dominated by A and B |
+| D | 5 | 8 | Non-dominated |
+
+A, B and D represent different trade-offs. If latency must be at most 7 ms and energy at most 6 mJ, only B is feasible. A good energy result does not compensate for violating a hard deadline.
+
+Lecture 8 distinguishes the **solution space** $X$ (choices such as processor count or bus width) from the **objective space** $F$ (measured or estimated outcomes). Evaluation maps $x\in X$ to $f(x)\in F$. Record the model and assumptions behind that evaluation; refining the model may change which designs remain attractive.
 
 ---
 
