@@ -12,8 +12,8 @@ Use this guide to find the book chapters that accompany each lecture. Lecture nu
 | 3 | Embedded Systems Design | [Abstraction, refinement and design evidence](../embedded-systems-design/introduction.md#refinement-and-evidence) |
 | 4 | Embedded Systems Specification | [Requirements, structural and behavioural models](../specification/introduction.md) |
 | 5 | Embedded Systems Specification II | [Ptolemy actors, directors and lifecycle](../specification/ptolemy.md) |
-| 6 | Computation Models | [Continuous time, discrete events and untimed models](../specification/models-of-computation.md) |
-| 7 | Dataflow Models | [KPN, SDF balance equations, schedules and buffers](../specification/dataflow.md) |
+| 6 | Computation Models | [Continuous time, discrete events and untimed models](../specification/models-of-computation.md), then the [overheat monitor tutorial](../tutorials/moc-overheat-monitor.md) |
+| 7 | Dataflow Models | [KPN, SDF balance equations, schedules and buffers](../specification/dataflow.md), then the dataflow tab of the [overheat monitor tutorial](../tutorials/moc-overheat-monitor.md) |
 | 8 | System Level Design | [Design space exploration and Pareto dominance](../hw-sw-codesign/design-space-exploration.md) |
 | 9 | Co-design and Partitioning | [Co-design](../hw-sw-codesign/introduction.md), [ILP and KL partitioning](../hw-sw-codesign/partitioning.md), then the [KL tutorial](../tutorials/kl-algorithm.md) |
 | 10 | Platform-based Design and Mapping | [Hungarian assignment, diffusion and genetic mapping](../hw-sw-codesign/mapping.md), then the [diffusion tutorial](../tutorials/diffusion-algorithm.md) |
