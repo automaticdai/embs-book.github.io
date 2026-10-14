@@ -30,6 +30,24 @@ $$\Gamma q=0,\qquad q_i\in\mathbb{Z}_{>0}.$$
 
 Use the smallest positive integer solution for a basic iteration. For a connected graph with ordinary positive rates, consistency gives a one-dimensional nullspace and $\operatorname{rank}(\Gamma)=n-1$. Disconnected components must be considered separately. Token balance alone does not prove that an executable schedule exists.
 
+## Worked example: the overheat monitor as SDF
+
+The dataflow version of the [overheat monitor](models-of-computation.md#running-example-an-overheat-monitor) is a chain:
+
+| Channel | Produced per source firing | Consumed per destination firing |
+|---|---:|---:|
+| Sensor $\to$ Average | 1 | 4 |
+| Average $\to$ Compare | 1 | 1 |
+| Compare $\to$ LED | 1 | 1 |
+
+The Average actor takes non-overlapping blocks of four samples. That multirate behaviour is what gives the graph a rate other than 1. The balance equations $q_S=4q_A$, $q_A=q_C$ and $q_C=q_L$ give the repetition vector $q=(4,1,1,1)$ for (Sensor, Average, Compare, LED).
+
+Starting with empty channels, `S S S S A C L` is a PASS with a peak of four tokens on Sensor $\to$ Average. `S S S S A S S S S A C C L L` is also valid but repeats the basic iteration twice and holds two averages at once. With samples 70, 75, 82, 88, 90, 92, 85, 79, 60, 55, 58, 62, the averages are 78.75, 86.5 and 58.75 °C, and the LED sees `off, on, off` whichever valid order is used. This is Kahn determinism.
+
+The DE version used a sliding window, so it produces an average for every sample. Changing the averager changes the function computed, not just its schedule.
+
+Try both orders in the [interactive tutorial](../tutorials/moc-overheat-monitor.md).
+
 ## Worked example: the lecture's three actors
 
 The channels have these rates:

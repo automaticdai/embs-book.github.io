@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Overheat Monitor MoCs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --ink:#1C2430; --muted:#5A6676; --line:#D5DBE3; --soft:#E9EDF2;
+  --ct:#A64D00; --de:#1F4E79; --df:#1E7B3A; --alarm:#C62828; --ok:#2E7D32;
+  --accent:var(--de);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+    --ct:#E8A060; --de:#78AEE0; --df:#6CC487; --alarm:#FF6B6B; --ok:#7BD88F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+  --ct:#E8A060; --de:#78AEE0; --df:#6CC487; --alarm:#FF6B6B; --ok:#7BD88F;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  font-size:18px;line-height:1.5;font-variant-numeric:tabular-nums}
+body[data-model="ct"]{--accent:var(--ct)}
+body[data-model="de"]{--accent:var(--de)}
+body[data-model="df"]{--accent:var(--df)}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 40px}
+header h1{font-size:clamp(26px,3.4vw,38px);line-height:1.15;margin:0 0 6px;font-weight:700;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);max-width:70ch}
+.tabs{display:flex;gap:6px;margin:24px 0 0;flex-wrap:wrap}
+.tab{font:inherit;font-size:17px;font-weight:700;border:2px solid var(--line);border-bottom:none;background:var(--soft);
+  color:var(--muted);padding:10px 18px;border-radius:10px 10px 0 0;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--tabc);border-color:var(--tabc)}
+.tab[data-m="ct"]{--tabc:var(--ct)} .tab[data-m="de"]{--tabc:var(--de)} .tab[data-m="df"]{--tabc:var(--df)}
+.panel{background:var(--surface);border:2px solid var(--accent);border-radius:0 12px 12px 12px;padding:22px}
+.panel[hidden]{display:none}
+.lede{margin:0 0 16px;max-width:75ch}
+.lede b{color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.stage{background:var(--bg);border-radius:10px;padding:8px;overflow-x:auto}
+.stage svg{display:block;width:100%;height:auto;min-width:560px}
+.side h3{font-size:15px;margin:0 0 6px;color:var(--muted);font-weight:700}
+.narr{border-left:4px solid var(--accent);background:var(--bg);padding:12px 14px;border-radius:0 8px 8px 0;margin:16px 0 0;min-height:4.8em}
+.narr p{margin:0}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+button.ctl{font:inherit;font-size:16px;font-weight:700;padding:9px 16px;border-radius:8px;cursor:pointer;
+  border:2px solid var(--accent);background:var(--accent);color:var(--surface)}
+button.ctl.secondary{background:transparent;color:var(--accent)}
+button.ctl:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.kbd{color:var(--muted);font-size:14px}
+label.slider{display:flex;flex-direction:column;gap:4px;font-size:16px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.stat{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:16px}
+.stat:last-child{border-bottom:none}
+.stat span:last-child{font-weight:700}
+.warn{color:var(--alarm);font-weight:700}
+.eq{font-size:17px;background:var(--bg);padding:10px 12px;border-radius:8px;margin:0 0 12px}
+/* DE */
+.clock{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.clock .t{font-size:48px;font-weight:700;color:var(--de);line-height:1}
+.clock .u{color:var(--muted)}
+.clock.jump .t{animation:jump .5s ease-out}
+@keyframes jump{0%{transform:translateY(-10px);opacity:.3}100%{transform:none;opacity:1}}
+ol.queue{list-style:none;margin:0;padding:0;font-size:15px}
+ol.queue li{display:grid;grid-template-columns:70px 1fr;gap:6px;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:var(--bg)}
+ol.queue li.next{outline:2px solid var(--de);background:color-mix(in srgb,var(--de) 12%,var(--bg))}
+ol.queue .tag{color:var(--muted)}
+ol.queue .empty{display:block;color:var(--muted);background:none}
+/* SVG shared */
+.actor rect{fill:var(--surface);stroke:var(--line);stroke-width:2}
+.actor text{fill:var(--ink);font-size:16px;font-weight:700}
+.actor .sub{fill:var(--muted);font-size:13px;font-weight:400}
+.actor.firing rect{stroke:var(--accent);stroke-width:4}
+.actor.enabled rect{stroke:var(--df);stroke-width:3}
+.actor.disabled rect{stroke-dasharray:6 5}
+.actor.disabled text{fill:var(--muted)}
+.actor[role=button]{cursor:pointer}
+.actor[role=button]:focus{outline:none}
+.actor[role=button]:focus-visible rect{stroke:var(--accent);stroke-width:5}
+.edge{stroke:var(--muted);stroke-width:2;fill:none}
+.edge.hot{stroke:var(--accent);stroke-width:4}
+.badge circle{fill:var(--de)} .badge text{fill:var(--surface);font-size:12px;font-weight:700}
+.axis line,.axis path{stroke:var(--line)} .axis text{fill:var(--muted);font-size:12px}
+.chip rect{fill:color-mix(in srgb,var(--df) 18%,var(--surface));stroke:var(--df);stroke-width:1.5}
+.chip text{fill:var(--ink);font-size:12px;font-weight:700}
+.rate{fill:var(--muted);font-size:13px;font-weight:700}
+.log{font-size:16px;margin-top:10px}
+.log b{color:var(--df)}
+footer{color:var(--muted);font-size:14px;margin-top:18px;max-width:80ch}
+@media (prefers-reduced-motion:reduce){.clock.jump .t{animation:none}}
+</style>
+</head>
+<body data-model="ct">
+<div class="wrap">
+<header>
+  <h1>One overheat monitor, three ways of computing it</h1>
+  <p>A board heats up, a sensor samples it every 100&nbsp;ms, the last four samples are averaged, and an LED turns on above 80&nbsp;°C. Each tab runs it under a different model of computation.</p>
+</header>
+
+<div class="tabs" role="tablist" aria-label="Model of computation">
+  <button class="tab" role="tab" id="tab-ct" data-m="ct" aria-controls="p-ct" aria-selected="true">Continuous time</button>
+  <button class="tab" role="tab" id="tab-de" data-m="de" aria-controls="p-de" aria-selected="false" tabindex="-1">Discrete event</button>
+  <button class="tab" role="tab" id="tab-df" data-m="df" aria-controls="p-df" aria-selected="false" tabindex="-1">Dataflow</button>
+</div>
+
+<!-- ================= CT ================= -->
+<section class="panel" id="p-ct" role="tabpanel" aria-labelledby="tab-ct">
+  <p class="lede">The <b>physics</b>: the board's temperature exists at every instant. A computer can only <b>approximate</b> it, by stepping an ODE solver forward. Change the step size and watch the approximation drift from the true curve.</p>
+  <div class="grid">
+    <div>
+      <div class="stage"><svg id="ct-svg" viewBox="0 0 760 340" role="img" aria-label="Board temperature over time: exact solution and Euler approximation"></svg></div>
+      <div class="controls">
+        <button class="ctl" id="ct-play">Play</button>
+        <button class="ctl secondary" id="ct-reset">Reset</button>
+        <span class="kbd">Space plays and pauses</span>
+      </div>
+    </div>
+    <div class="side">
+      <div class="eq">C·dT/dt = P − (T − T<sub>amb</sub>)/R<br><span class="kbd">C = 12 J/K, R = 10 K/W, P = 7 W, T<sub>amb</sub> = 25 °C, so τ = RC = 120 s</span></div>
+      <label class="slider" for="ct-h">Solver step h: <strong><span id="ct-hv">60</span> s</strong>
+        <input type="range" id="ct-h" min="5" max="260" step="5" value="60"></label>
+      <div style="margin-top:12px">
+        <div class="stat"><span>Exact time to reach 80 °C</span><span>184.9 s</span></div>
+        <div class="stat"><span>Solver says alarm at</span><span id="ct-cross">–</span></div>
+        <div class="stat"><span>Largest error at a step</span><span id="ct-err">–</span></div>
+      </div>
+      <div class="narr" aria-live="polite"><p id="ct-narr"></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DE ================= -->
+<section class="panel" id="p-de" role="tabpanel" aria-labelledby="tab-de" hidden>
+  <p class="lede">Every message is an <b>event with a timestamp</b>, held in one global queue. The director always processes the earliest event, and model time <b>jumps</b> from one event to the next: nothing in between is simulated.</p>
+  <div class="grid">
+    <div>
+      <div class="clock" id="de-clock"><span class="t" id="de-t">0</span><span class="u">ms model time</span></div>
+      <div class="stage"><svg id="de-svg" viewBox="0 0 760 300" role="img" aria-label="Actor graph for the discrete-event model"></svg></div>
+      <div class="controls">
+        <button class="ctl" id="de-step">Process next event</button>
+        <button class="ctl secondary" id="de-play">Play</button>
+        <button class="ctl secondary" id="de-reset">Reset</button>
+        <span class="kbd">Space steps</span>
+      </div>
+      <div class="narr" aria-live="polite"><p id="de-narr"></p></div>
+    </div>
+    <div class="side">
+      <h3>Global event queue, earliest first</h3>
+      <ol class="queue" id="de-queue"></ol>
+      <p class="kbd" style="margin-top:10px">Sorted by timestamp, then microstep (μ), then depth: upstream actors first. All events here have μ = 0; microsteps only grow when an actor reschedules itself at the same instant.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Dataflow ================= -->
+<section class="panel" id="p-df" role="tabpanel" aria-labelledby="tab-df" hidden>
+  <p class="lede">There is <b>no clock</b>. An actor may fire whenever enough tokens wait on its inputs. You are the scheduler: click any green actor, in any order you like.</p>
+  <div class="grid">
+    <div>
+      <div class="stage"><svg id="df-svg" viewBox="0 0 760 300" role="group" aria-label="Dataflow graph. Enabled actors can be activated."></svg></div>
+      <div class="controls">
+        <button class="ctl" id="df-auto">Fire one by a valid schedule</button>
+        <button class="ctl secondary" id="df-reset">Reset</button>
+      </div>
+      <div class="narr" aria-live="polite"><p id="df-narr"></p></div>
+    </div>
+    <div class="side">
+      <h3>What happened</h3>
+      <div class="log">Your firing order:<br><span id="df-order">–</span></div>
+      <div class="log">The LED saw: <b id="df-led">nothing yet</b></div>
+      <p class="kbd" style="margin-top:12px">Averager consumes 4 tokens per firing and produces 1, so a valid schedule fires the sensor 4 times for every averager firing. Reads are destructive: consumed tokens disappear. Unlike the sliding window in the DE tab, this averager takes non-overlapping blocks of 4: a multirate actor, which is where SDF rates come from.</p>
+    </div>
+  </div>
+</section>
+
+<footer>The DE and dataflow tabs use a fixed sample stream (70, 75, 82, 88, …) so every run is repeatable; the CT thermal model settles at 95 °C. Keyboard: arrow keys move between tabs.</footer>
+</div>
+
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg";
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e}
+function clear(n){while(n.firstChild)n.removeChild(n.firstChild)}
+const fmt=(x,d=1)=>(Math.round(x*10**d)/10**d).toFixed(d);
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll('.tab')];
+function select(m){
+  tabs.forEach(t=>{const on=t.dataset.m===m;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;
+    document.getElementById(t.getAttribute('aria-controls')).hidden=!on});
+  document.body.dataset.model=m; stopAll();
+}
+tabs.forEach((t,i)=>{t.addEventListener('click',()=>select(t.dataset.m));
+  t.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const n=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];n.focus();select(n.dataset.m)}})});
+
+/* =================== CT =================== */
+const C=12,R=10,P=7,Ta=25,T0=25,tau=R*C,Tinf=Ta+P*R,TMAX=600,THR=80;
+const exact=t=>Tinf+(T0-Tinf)*Math.exp(-t/tau);
+const tStar=-tau*Math.log((Tinf-THR)/(Tinf-T0));
+const ct={svg:document.getElementById('ct-svg'),h:60,p:TMAX,playing:false,raf:0};
+const X0=56,X1=740,Y0=300,Y1=20,TLO=0,THI=140;
+const sx=t=>X0+(t/TMAX)*(X1-X0), sy=T=>Y0-((T-TLO)/(THI-TLO))*(Y0-Y1);
+function euler(h){const pts=[[0,T0]];let T=T0;for(let t=h;t<=TMAX+1e-9;t+=h){T=T+h*(P-(T-Ta)/R)/C;pts.push([t,T])}return pts}
+function ctDraw(){
+  const s=ct.svg;clear(s);
+  const defs=el('defs',{},s);const cp=el('clipPath',{id:'ct-clip'},defs);el('rect',{x:X0,y:Y1,width:X1-X0,height:Y0-Y1},cp);
+  const ax=el('g',{class:'axis'},s);
+  for(let T=0;T<=THI;T+=20){el('line',{x1:X0,x2:X1,y1:sy(T),y2:sy(T)},ax);el('text',{x:X0-8,y:sy(T)+4,'text-anchor':'end'},ax,T)}
+  for(let t=0;t<=TMAX;t+=100){el('text',{x:sx(t),y:Y0+20,'text-anchor':'middle'},ax,t+' s')}
+  el('text',{x:X0-8,y:Y1-6,'text-anchor':'end'},ax,'°C');
+  el('line',{x1:X0,x2:X1,y1:sy(THR),y2:sy(THR),stroke:'var(--alarm)','stroke-width':2,'stroke-dasharray':'6 5'},s);
+  el('text',{x:X1-4,y:sy(THR)-6,'text-anchor':'end',fill:'var(--alarm)','font-size':13,'font-weight':700},s,'alarm threshold 80 °C');
+  const g=el('g',{'clip-path':'url(#ct-clip)'},s);
+  let d='';for(let t=0;t<=ct.p;t+=2)d+=(t?'L':'M')+sx(t)+' '+sy(exact(t));
+  el('path',{d,fill:'none',stroke:'var(--ct)','stroke-width':4},g);
+  const pts=euler(ct.h).filter(q=>q[0]<=ct.p+1e-9);
+  let pd='';pts.forEach((q,i)=>pd+=(i?'L':'M')+sx(q[0])+' '+sy(q[1]));
+  el('path',{d:pd,fill:'none',stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'4 4'},g);
+  pts.forEach(q=>el('circle',{cx:sx(q[0]),cy:sy(q[1]),r:5,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':2.5},g));
+  if(ct.p<TMAX)el('line',{x1:sx(ct.p),x2:sx(ct.p),y1:Y1,y2:Y0,stroke:'var(--muted)','stroke-width':1.5},s);
+  const lg=el('g',{},s);
+  el('line',{x1:X0+12,x2:X0+40,y1:Y1+14,y2:Y1+14,stroke:'var(--ct)','stroke-width':4},lg);
+  el('text',{x:X0+48,y:Y1+19,fill:'var(--ink)','font-size':14},lg,'exact solution (continuous)');
+  el('circle',{cx:X0+26,cy:Y1+38,r:5,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':2.5},lg);
+  el('text',{x:X0+48,y:Y1+43,fill:'var(--ink)','font-size':14},lg,'Euler solver: values only at its steps');
+}
+function ctStats(){
+  const pts=euler(ct.h);const hit=pts.find(q=>q[1]>THR);
+  document.getElementById('ct-cross').textContent=hit?hit[0]+' s ('+(hit[0]-tStar>=0?'+':'')+fmt(hit[0]-tStar)+' s)':'never';
+  const err=Math.max(...pts.map(q=>Math.abs(q[1]-exact(q[0]))));
+  document.getElementById('ct-err').textContent=isFinite(err)&&err<1000?fmt(err)+' °C':'diverges';
+  let n;
+  if(ct.h>2*tau) n=`<span class="warn">Unstable.</span> With h = ${ct.h} s, more than 2τ = ${2*tau} s, each Euler step overshoots by more than it corrects, so the error grows without bound. The physics is fine; the solver is not.`;
+  else if(ct.h>tau) n=`With h = ${ct.h} s, larger than τ = ${tau} s, Euler overshoots the steady state on every step and zig-zags around it. The real board never does this.`;
+  else if(ct.h<=10) n=`With small steps the dots sit almost on the true curve, but you pay with ${Math.round(TMAX/ct.h)} solver steps. A numerical solution is a discrete-event signal: values only at the dots.`;
+  else n=`The solver only knows the dots; between them it knows nothing. It first sees the alarm at ${hit?hit[0]+' s':'no step'}, while the true crossing is at ${fmt(tStar)} s. Smaller steps reduce the error but cost more computation.`;
+  document.getElementById('ct-narr').innerHTML=n;
+  document.getElementById('ct-hv').textContent=ct.h;
+}
+function ctTick(ts){
+  if(!ct.playing)return;
+  if(!ct.start)ct.start=ts-ct.p/TMAX*7000;
+  ct.p=Math.min(TMAX,(ts-ct.start)/7000*TMAX);ctDraw();
+  if(ct.p>=TMAX){ct.playing=false;document.getElementById('ct-play').textContent='Play again';return}
+  ct.raf=requestAnimationFrame(ctTick);
+}
+function ctPlay(){
+  if(ct.playing){ct.playing=false;cancelAnimationFrame(ct.raf);document.getElementById('ct-play').textContent='Play';return}
+  if(ct.p>=TMAX)ct.p=0;
+  if(reduce){ct.p=TMAX;ctDraw();return}
+  ct.playing=true;ct.start=null;document.getElementById('ct-play').textContent='Pause';ct.raf=requestAnimationFrame(ctTick);
+}
+document.getElementById('ct-h').addEventListener('input',e=>{ct.h=+e.target.value;ctStats();ctDraw()});
+document.getElementById('ct-play').addEventListener('click',ctPlay);
+document.getElementById('ct-reset').addEventListener('click',()=>{ct.playing=false;cancelAnimationFrame(ct.raf);ct.p=0;ctDraw();document.getElementById('ct-play').textContent='Play'});
+ctStats();ctDraw();
+
+/* =================== DE =================== */
+const SAMPLES=[70,75,82,88,90,72,60,55],PERIOD=100;
+const A={Sampler:{d:0,i:0,x:30,y:120},Averager:{d:1,i:1,x:220,y:50},Comparator:{d:2,i:2,x:420,y:50},Display:{d:2,i:3,x:420,y:190},Alarm:{d:3,i:4,x:590,y:50}};
+const AW=130,AH=64;
+const EDGES=[['Sampler','Averager'],['Sampler','Display'],['Averager','Comparator'],['Averager','Display'],['Comparator','Alarm']];
+const de={};
+function deReset(){Object.assign(de,{t:0,q:[{t:0,mu:0,to:'Sampler',kind:'pure'}],k:0,win:[],disp:{},led:false,firing:null,hot:[],playing:false,done:false});
+  clearInterval(de.timer);document.getElementById('de-play').textContent='Play';
+  document.getElementById('de-narr').innerHTML='The queue starts with one <b>pure event</b>: the Sampler has booked itself a wake-up at 0 ms. Press “Process next event”.';
+  deRender();}
+const key=e=>[e.t,e.mu,A[e.to].d,A[e.to].i];
+function cmp(a,b){const x=key(a),y=key(b);for(let i=0;i<4;i++)if(x[i]!==y[i])return x[i]-y[i];return 0}
+function emit(to,port,value){de.q.push({t:de.t,mu:0,to,port,value,kind:'data'});de.hot.push(de.firing+'>'+to)}
+function deStep(){
+  if(!de.q.length){de.done=true;return}
+  de.q.sort(cmp);const head=de.q[0];
+  const batch=de.q.filter(e=>e.t===head.t&&e.mu===head.mu&&e.to===head.to);
+  de.q=de.q.filter(e=>!batch.includes(e));
+  const jumped=head.t!==de.t, from=de.t; de.t=head.t; de.firing=head.to; de.hot=[];
+  const inp={};batch.forEach(e=>{if(e.port)inp[e.port]=e.value});
+  let n='';
+  if(head.to==='Sampler'){
+    const v=SAMPLES[de.k++];emit('Averager','in',v);emit('Display','sample',v);
+    if(de.k<SAMPLES.length)de.q.push({t:de.t+PERIOD,mu:0,to:'Sampler',kind:'pure'});
+    n=(jumped?`Model time <b>jumps from ${from} to ${de.t} ms</b>: nothing happens in between, so nothing is simulated. `:'')+
+      `The Sampler wakes on its own pure event, reads <b>${v} °C</b>, and sends it to Averager and Display, both stamped ${de.t} ms.`+
+      (de.k<SAMPLES.length?` It also books its next wake-up for ${de.t+PERIOD} ms.`:` That was the last sample.`);
+  }else if(head.to==='Averager'){
+    de.win.push(inp.in);if(de.win.length>4)de.win.shift();
+    const avg=de.win.reduce((a,b)=>a+b,0)/4;emit('Comparator','avg',avg);emit('Display','avg',avg);
+    n=`Averager fires first among the waiting actors because its depth (1) is the smallest. Window [${de.win.join(', ')}] gives <b>${fmt(avg,2)} °C</b>. Its outputs carry the same timestamp, ${de.t} ms: no time passes.`;
+  }else if(head.to==='Comparator'){
+    const on=inp.avg>80;emit('Alarm','on',on);
+    n=`Comparator (depth 2): ${fmt(inp.avg,2)} ${on?'>':'≤'} 80, so it sends <b>${on?'on':'off'}</b> to the Alarm, still at ${de.t} ms.`;
+  }else if(head.to==='Display'){
+    de.disp={sample:inp.sample,avg:inp.avg};
+    n=`Display fires <b>once, with both inputs</b>: sample ${inp.sample} °C and average ${fmt(inp.avg,2)} °C. Its depth (2) is greater than Averager's (1), so it waited until the average existed. Without depth ordering it could have fired twice and shown a stale average.`;
+  }else if(head.to==='Alarm'){
+    const was=de.led;de.led=inp.on;
+    n=`Alarm (depth 3, the most downstream) fires last at ${de.t} ms. LED is <b>${de.led?'ON':'off'}</b>${was!==de.led?(de.led?': the average just crossed 80 °C.':': the average has dropped back.'):'.'}`;
+  }
+  if(!de.q.length){de.done=true;n+=' The queue is now empty, so the simulation ends.'}
+  document.getElementById('de-narr').innerHTML=n;
+  if(jumped&&!reduce){const c=document.getElementById('de-clock');c.classList.remove('jump');void c.offsetWidth;c.classList.add('jump')}
+  deRender();
+}
+function deRender(){
+  document.getElementById('de-t').textContent=de.t;
+  const s=document.getElementById('de-svg');clear(s);
+  const defs=el('defs',{},s);const mk=el('marker',{id:'de-arr',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);
+  el('path',{d:'M0 0L10 5L0 10z',fill:'var(--muted)'},mk);
+  const mk2=el('marker',{id:'de-arr-hot',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'},defs);
+  el('path',{d:'M0 0L10 5L0 10z',fill:'var(--de)'},mk2);
+  EDGES.forEach(([a,b])=>{const p=A[a],q=A[b];const x1=p.x+AW,y1=p.y+AH/2,x2=q.x,y2=q.y+AH/2;const mx=(x1+x2)/2;
+    const hot=de.hot.includes(a+'>'+b);
+    el('path',{d:`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2-2} ${y2}`,class:'edge'+(hot?' hot':''),'marker-end':`url(#${hot?'de-arr-hot':'de-arr'})`},s)});
+  for(const [name,a] of Object.entries(A)){
+    const g=el('g',{class:'actor'+(de.firing===name?' firing':''),transform:`translate(${a.x},${a.y})`},s);
+    el('rect',{width:AW,height:AH,rx:10},g);
+    el('text',{x:AW/2,y:26,'text-anchor':'middle'},g,name);
+    let sub='';
+    if(name==='Display')sub=de.disp.sample!=null?`${de.disp.sample} °C | avg ${fmt(de.disp.avg,1)}`:'waiting';
+    if(name==='Sampler')sub=de.k<SAMPLES.length?`next: ${SAMPLES[de.k]} °C`:'finished';
+    if(name==='Averager')sub=de.win.length?`[${de.win.join(',')}]`:'window empty';
+    if(name==='Comparator')sub='avg > 80 ?';
+    if(name==='Alarm')sub=de.led?'LED ON':'LED off';
+    el('text',{x:AW/2,y:48,'text-anchor':'middle',class:'sub'},g,sub);
+    const b=el('g',{class:'badge',transform:`translate(${AW-4},-4)`},g);el('circle',{r:12},b);el('text',{y:4,'text-anchor':'middle'},b,'d'+a.d);
+    if(name==='Alarm')el('circle',{cx:AW+22,cy:AH/2,r:11,fill:de.led?'var(--alarm)':'var(--soft)',stroke:'var(--line)','stroke-width':2},g);
+  }
+  // timeline
+  const ty=278;el('line',{x1:30,x2:740,y1:ty,y2:ty,stroke:'var(--line)','stroke-width':2},s);
+  for(let t=0;t<=800;t+=100){const x=30+t/800*710;el('line',{x1:x,x2:x,y1:ty-5,y2:ty+5,stroke:'var(--line)'},s);el('text',{x,y:ty-10,'text-anchor':'middle',fill:'var(--muted)','font-size':11},s,t)}
+  el('circle',{cx:30+de.t/800*710,cy:ty,r:7,fill:'var(--de)'},s);
+  // queue
+  const ol=document.getElementById('de-queue');clear(ol);
+  const qs=[...de.q].sort(cmp);
+  if(!qs.length){const li=document.createElement('li');li.className='empty';li.textContent='Empty';ol.appendChild(li)}
+  qs.forEach((e,i)=>{const li=document.createElement('li');if(i===0)li.className='next';
+    const tag=document.createElement('span');tag.className='tag';tag.textContent=`${e.t} ms, μ${e.mu}`;
+    const body=document.createElement('span');
+    body.textContent=e.kind==='pure'?`${e.to} (d${A[e.to].d}): wake-up`:`${e.to} (d${A[e.to].d}): ${e.port} = ${typeof e.value==='boolean'?(e.value?'on':'off'):fmt(e.value,e.port==='avg'?2:0)}`;
+    li.append(tag,body);ol.appendChild(li)});
+  document.getElementById('de-step').disabled=de.done;
+}
+document.getElementById('de-step').addEventListener('click',deStep);
+document.getElementById('de-reset').addEventListener('click',deReset);
+document.getElementById('de-play').addEventListener('click',()=>{
+  if(de.playing){de.playing=false;clearInterval(de.timer);document.getElementById('de-play').textContent='Play';return}
+  if(de.done)deReset();
+  de.playing=true;document.getElementById('de-play').textContent='Pause';
+  de.timer=setInterval(()=>{if(de.done){clearInterval(de.timer);de.playing=false;document.getElementById('de-play').textContent='Play';return}deStep()},1400)});
+deReset();
+
+/* =================== Dataflow =================== */
+const DFS=[70,75,82,88,90,92,85,79,60,55,58,62];
+const DA={Sensor:{x:20,y:60,w:110},Average:{x:330,y:60,w:110},Compare:{x:510,y:60,w:110}};
+const df={};
+function dfReset(){Object.assign(df,{i:0,e1:[],e2:[],e3:[],order:[],leds:[],last:null});
+  document.getElementById('df-narr').innerHTML='All buffers are empty, so only the Sensor can fire: it has no inputs. Click it, or use the schedule button.';dfRender()}
+function enabled(n){return n==='Sensor'?df.i<DFS.length:n==='Average'?df.e1.length>=4:n==='Compare'?df.e2.length>=1:df.e3.length>=1}
+function dfFire(n){
+  if(!enabled(n))return;
+  let msg='';
+  if(n==='Sensor'){const v=DFS[df.i++];df.e1.push(v);msg=`Sensor fires and puts token <b>${v}</b> on its output channel. It needed no input, and no clock told it to fire.`}
+  if(n==='Average'){const w=df.e1.splice(0,4);const a=w.reduce((x,y)=>x+y,0)/4;df.e2.push(+a.toFixed(2));
+    msg=`Average consumes <b>4 tokens</b> [${w.join(', ')}], which are removed (destructive read), and produces one token: <b>${fmt(a,2)}</b>.`}
+  if(n==='Compare'){const a=df.e2.shift();const on=a>80;df.e3.push(on);msg=`Compare reads ${fmt(a,2)} and produces <b>${on?'on':'off'}</b>.`}
+  if(n==='LED'){const on=df.e3.shift();df.leds.push(on);msg=`The LED consumes the token and turns <b>${on?'ON':'off'}</b>.`}
+  df.order.push(n==='Sensor'?'S':n==='Average'?'A':n==='Compare'?'C':'L');df.last=n;
+  if(df.i===DFS.length&&!['Sensor','Average','Compare','LED'].some(enabled))
+    msg+=` <b>All 12 samples processed.</b> The LED saw ${df.leds.map(x=>x?'on':'off').join(', ')}. Press Reset and fire in a different order: this sequence never changes. That is Kahn determinism.`;
+  document.getElementById('df-narr').innerHTML=msg;dfRender();
+}
+function dfAuto(){for(const n of ['LED','Compare','Average','Sensor'])if(enabled(n)){dfFire(n);return}}
+function chips(arr,x0,x1,y,parent,fmtv){const per=Math.max(1,Math.floor((x1-x0)/40));
+  arr.forEach((v,k)=>{const r=Math.floor(k/per),c=k%per;const g=el('g',{class:'chip',transform:`translate(${x0+4+c*40},${y+12+r*28})`},parent);
+    el('rect',{width:36,height:22,rx:11},g);el('text',{x:18,y:15,'text-anchor':'middle'},g,fmtv(v))})}
+function dfRender(){
+  const s=document.getElementById('df-svg');clear(s);
+  const defs=el('defs',{},s);const mk=el('marker',{id:'df-arr',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto'},defs);
+  el('path',{d:'M0 0L10 5L0 10z',fill:'var(--muted)'},mk);
+  const cy=60+AH/2;
+  const ex=[[130,330,'e1',df.e1,'1','4',v=>v],[440,510,'e2',df.e2,'1','1',v=>Math.round(v)],[620,672,'e3',df.e3,'1','1',v=>v?'on':'off']];
+  ex.forEach(([x1,x2,id,arr,pr,cr,f])=>{
+    el('line',{x1,x2:x2-2,y1:cy,y2:cy,class:'edge','marker-end':'url(#df-arr)'},s);
+    el('text',{x:x1+6,y:cy-8,class:'rate'},s,pr);el('text',{x:x2-12,y:cy-8,class:'rate','text-anchor':'end'},s,cr);
+    chips(arr,x1,x2,cy,s,f)});
+  const all=[...Object.entries(DA),['LED',{x:672,y:60,w:70}]];
+  all.forEach(([n,a])=>{
+    const on=enabled(n);
+    const g=el('g',{class:'actor '+(on?'enabled':'disabled')+(df.last===n?' firing':''),transform:`translate(${a.x},${a.y})`,role:'button',tabindex:on?0:-1,'aria-disabled':!on,'aria-label':`Fire ${n}${on?'':' (not enabled)'}`},s);
+    el('rect',{width:a.w,height:AH,rx:10},g);
+    el('text',{x:a.w/2,y:n==='LED'?24:28,'text-anchor':'middle'},g,n);
+    if(n==='LED'){const last=df.leds[df.leds.length-1];el('circle',{cx:a.w/2,cy:44,r:10,fill:last?'var(--alarm)':'var(--soft)',stroke:'var(--line)','stroke-width':2},g)}
+    else el('text',{x:a.w/2,y:50,'text-anchor':'middle',class:'sub'},g,n==='Sensor'?`${DFS.length-df.i} samples left`:n==='Average'?'needs 4':'needs 1');
+    g.addEventListener('click',()=>dfFire(n));
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();dfFire(n)}});
+  });
+  el('text',{x:20,y:250,fill:'var(--muted)','font-size':14},s,'Green outline = enough input tokens to fire. Dashed = must wait. Numbers on edges: tokens produced → consumed per firing.');
+  document.getElementById('df-order').textContent=df.order.length?df.order.join(' '):'–';
+  document.getElementById('df-led').textContent=df.leds.length?df.leds.map(x=>x?'on':'off').join(', '):'nothing yet';
+  document.getElementById('df-auto').disabled=!['Sensor','Average','Compare','LED'].some(enabled);
+}
+document.getElementById('df-auto').addEventListener('click',dfAuto);
+document.getElementById('df-reset').addEventListener('click',dfReset);
+dfReset();
+
+/* ---------- global ---------- */
+function stopAll(){ct.playing=false;cancelAnimationFrame(ct.raf);document.getElementById('ct-play').textContent=ct.p>=TMAX?'Play again':'Play';
+  if(de.playing){de.playing=false;clearInterval(de.timer);document.getElementById('de-play').textContent='Play'}}
+document.addEventListener('keydown',e=>{
+  if(e.key!==' '||e.target.closest('button,input,[role=button]'))return;
+  const m=document.body.dataset.model;e.preventDefault();
+  if(m==='ct')ctPlay();else if(m==='de'&&!de.done)deStep();else if(m==='df')dfAuto();
+});
+})();
+</script>
+</body>
+</html>

@@ -69,6 +69,7 @@ A companion to the EMBS module. Explore the principles of embedded systems, the 
 
 ## Interactive tutorials
 
+- [Overheat monitor, three MoCs](tutorials/moc-overheat-monitor.md) — Run one system under continuous-time, discrete-event and dataflow semantics
 - [Kernighan–Lin algorithm](tutorials/kl-algorithm.md) — Move nodes and step through graph partitioning
 - [Diffusion load balancing](tutorials/diffusion-algorithm.md) — Watch load flow between neighbouring nodes until it evens out
 - [PDA vs QPA](tutorials/pda-qpa.md) — Compare two exact EDF schedulability tests on random task sets
