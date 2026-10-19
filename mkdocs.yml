@@ -112,6 +112,7 @@ nav:
     - Mixed-Criticality Systems: multicore-resource-sharing/mixed-criticality.md
   - Tutorials:
     - Overheat Monitor MoCs: tutorials/moc-overheat-monitor.md
+    - Kahn Process Network: tutorials/kpn-scheduler.md
     - Kernighan–Lin Algorithm: tutorials/kl-algorithm.md
     - Diffusion Load Balancing: tutorials/diffusion-algorithm.md
     - PDA vs QPA: tutorials/pda-qpa.md
