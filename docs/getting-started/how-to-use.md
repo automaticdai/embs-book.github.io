@@ -30,6 +30,7 @@ Throughout this book, you'll find interactive tutorials that let you explore alg
 Current interactive tutorials:
 
 - [**Overheat Monitor, Three MoCs**](../tutorials/moc-overheat-monitor.md) — Compare continuous-time, discrete-event and dataflow execution of one system
+- [**Kahn Process Network**](../tutorials/kpn-scheduler.md) — Act as the scheduler for a KPN and test Kahn determinism
 - [**Kernighan-Lin Algorithm**](../tutorials/kl-algorithm.md) — Step through the KL graph partitioning algorithm
 - [**Diffusion Load Balancing**](../tutorials/diffusion-algorithm.md) — Step through iterative load diffusion on a graph
 - [**PDA vs QPA**](../tutorials/pda-qpa.md) — Compare Processor Demand Analysis with Quick convergence Processor-demand Analysis

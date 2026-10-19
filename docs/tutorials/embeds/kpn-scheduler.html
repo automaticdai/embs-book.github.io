@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kahn Process Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --ink:#1C2430; --muted:#5A6676; --line:#D5DBE3; --soft:#E9EDF2;
+  --stage:#E4E9F0; --accent:#1E7B3A; --accent-ink:#FFFFFF; --even:#2F6FB0; --odd:#C8691C; --block:#C62828; --hit:#E6F2E9;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+    --stage:#10151B; --accent:#6CC487; --accent-ink:#151A21; --even:#78AEE0; --odd:#E8A060; --block:#FF6B6B; --hit:#203A2A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+  --stage:#10151B; --accent:#6CC487; --accent-ink:#151A21; --even:#78AEE0; --odd:#E8A060; --block:#FF6B6B; --hit:#203A2A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  font-size:18px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 40px}
+h1{font-size:clamp(26px,3.4vw,38px);line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+.intro{margin:0 0 18px;color:var(--muted);max-width:74ch}
+.intro .e{color:var(--even);font-weight:700} .intro .o{color:var(--odd);font-weight:700}
+.stagebox{--barh:104px;position:relative;border-radius:14px;overflow:hidden;background:var(--stage);height:clamp(400px,58vh,640px)}
+#gl{position:absolute;top:0;left:0;right:0;bottom:var(--barh);width:100%;height:calc(100% - var(--barh));display:block;cursor:default}
+.flat{position:absolute;top:0;left:0;right:0;bottom:var(--barh);display:none;flex-direction:column;justify-content:center;gap:8px;padding:16px 20px;overflow:auto;font-size:16px}
+.flat .row{display:flex;gap:10px;align-items:center}
+.flat .nm{width:150px;color:var(--muted);font-weight:700}
+.flat .tk{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#fff;font-weight:700;font-size:14px}
+.nogl .flat{display:flex} .nogl #gl{display:none}
+.legend{position:absolute;right:14px;top:12px;font-size:14px;color:var(--muted);background:color-mix(in srgb,var(--stage) 80%,transparent);padding:4px 8px;border-radius:8px;pointer-events:none}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin:0 4px 0 10px;vertical-align:-1px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;margin-top:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.row2{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+.lab{font-size:14px;color:var(--muted);font-weight:700;margin:0 0 6px}
+button{font:inherit;font-size:16px;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer;border:2px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+button.secondary{background:transparent;color:var(--accent)}
+button.proc{min-width:84px}
+button.proc.blocked{border-color:var(--block);color:var(--block);background:transparent}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input[type=text]{font:inherit;font-size:17px;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:8px;padding:7px 10px;width:14ch}
+input[type=range]{accent-color:var(--accent);width:120px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted);font-weight:700}
+.seg{display:inline-flex;border:2px solid var(--accent);border-radius:9px;overflow:hidden}
+.seg label{padding:7px 12px;cursor:pointer;font-size:15px;font-weight:700;color:var(--accent)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink)}
+.seg label span{display:block;margin:-7px -12px;padding:7px 12px}
+.seg input:focus-visible+span{outline:3px solid var(--accent);outline-offset:-3px}
+.narr{border-left:4px solid var(--accent);background:var(--surface);padding:12px 14px;border-radius:0 8px 8px 0;margin-top:6px;min-height:4.6em}
+.narr p{margin:0}
+.side{background:var(--surface);border-radius:12px;padding:16px}
+.side h2{font-size:17px;margin:0 0 6px}
+.bar{position:absolute;left:0;right:0;bottom:0;height:var(--barh);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:center;padding:10px 20px;background:var(--surface);border-top:3px solid var(--accent)}
+.bar .lab{margin:0 0 4px}
+.out{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:44px}
+.out .tk{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:50%;color:#fff;font-size:20px;font-weight:700}
+.out .none{color:var(--muted);font-size:18px}
+.sched{font-size:20px;font-weight:700;color:var(--muted);line-height:1.35;max-height:56px;overflow:hidden;display:flex;flex-wrap:wrap;gap:2px 9px;align-content:flex-end}
+.sched .last{color:var(--accent);text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:3px}
+.sched .n{color:var(--ink)}
+@media (max-width:640px){.stagebox{--barh:150px}.bar{grid-template-columns:1fr;gap:6px}}
+.cmp{margin-top:10px;font-size:15px}
+.cmp table{border-collapse:collapse;width:100%}
+.cmp td{padding:3px 4px;border-bottom:1px solid var(--line)}
+.cmp td:last-child{text-align:right;font-weight:700}
+.cmp tr.ref td{background:var(--hit)}
+.err{color:var(--block);font-size:15px;min-height:1.2em}
+.kbd{color:var(--muted);font-size:14px}
+.warn{color:var(--block);font-weight:700}
+hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>A Kahn Process Network you can schedule</h1>
+  <p class="intro">The network from the lecture. <b>f</b> sends <span class="e">even</span> numbers up and <span class="o">odd</span> numbers down, each <b>g</b> passes tokens through, and <b>h</b> takes one token from the top, then one from the bottom, in turn. Every read blocks until a token arrives. Fire the processes in any order you like: the output never changes.</p>
+
+  <div class="stagebox" id="stagebox">
+    <canvas id="gl" aria-hidden="true"></canvas>
+    <div class="flat" id="flat" aria-hidden="true"></div>
+    <div class="legend" aria-hidden="true"><i style="background:var(--even)"></i>even<i style="background:var(--odd)"></i>odd<i style="background:var(--block)"></i>blocked</div>
+    <div class="bar">
+      <div><p class="lab">Output, in order produced</p><div class="out" id="out"><span class="none">nothing yet</span></div></div>
+      <div><p class="lab">Schedule so far <span id="schedn"></span></p><div class="sched" id="sched">–</div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <p class="lab">Be the scheduler: fire one process (or click it in the picture)</p>
+      <div class="row2" id="procbtns">
+        <button class="proc" data-p="f">f</button>
+        <button class="proc" data-p="gu">g<sub>u</sub></button>
+        <button class="proc" data-p="gd">g<sub>d</sub></button>
+        <button class="proc" data-p="h">h</button>
+      </div>
+      <p class="lab">Or let a schedule run</p>
+      <div class="row2">
+        <button class="secondary" id="deckstep">Example schedule: next</button>
+        <button class="secondary" id="deckplay">Play example schedule</button>
+        <button class="secondary" id="rand">Random schedule</button>
+        <button class="secondary" id="reset">Reset</button>
+        <label class="field">Speed<input type="range" id="speed" min="1" max="5" value="3"></label>
+      </div>
+      <div class="narr" aria-live="polite"><p id="narr"></p></div>
+      <p class="kbd" style="margin-top:8px">Example schedule: f f f f f g<sub>u</sub> h h g<sub>u</sub> g<sub>d</sub> g<sub>d</sub> g<sub>u</sub> h h h (slides 14–47). Space plays the next step.</p>
+    </div>
+    <aside class="side">
+      <div class="row2" style="margin-bottom:6px">
+        <label class="field">Input stream (first value first)<input type="text" id="input" value="4 1 7 2 6" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="err" id="err" role="alert"></div>
+      <p class="lab" style="margin-top:6px">How h chooses its next input</p>
+      <div class="seg" role="radiogroup" aria-label="How h chooses its next input">
+        <label><input type="radio" name="mode" value="kahn" checked><span>Alternate (Kahn)</span></label>
+        <label><input type="radio" name="mode" value="first"><span>First available</span></label>
+      </div>
+      <p class="kbd" id="modenote" style="margin:6px 0 0"></p>
+      <hr>
+      <button class="secondary" id="compare">Try 200 random schedules</button>
+      <div class="cmp" id="cmp" aria-live="polite"></div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+/* ================= semantics engine ================= */
+function makeKPN(input,mode){
+  const S={ch:{in:[],v:[],w:[],t:[],u:[],out:[]},blocked:{f:null,gu:null,gd:null,h:null},s:true,clock:0,mode,nextId:0};
+  input.forEach(v=>S.ch.in.push({id:S.nextId++,val:v,born:S.clock++}));
+  const IN={f:'in',gu:'v',gd:'w'};
+  function readChan(p){
+    if(p!=='h')return IN[p];
+    if(S.mode==='kahn')return S.s?'t':'u';
+    const a=S.ch.t[0],b=S.ch.u[0];
+    if(a&&b)return a.born<=b.born?'t':'u';
+    return a?'t':b?'u':'either';
+  }
+  function complete(p,chan,ev){
+    const tok=S.ch[chan].shift();ev.push({type:'read',p,chan,tok});
+    let out;
+    if(p==='f')out=tok.val%2===0?'v':'w';
+    if(p==='gu')out='t';if(p==='gd')out='u';
+    if(p==='h'){out='out';if(S.mode==='kahn')S.s=!S.s}
+    tok.born=S.clock++;S.ch[out].push(tok);ev.push({type:'send',p,chan:out,tok});
+    for(const q of ['f','gu','gd','h']){
+      const b=S.blocked[q];
+      if(b&&(b===out||(b==='either'&&(out==='t'||out==='u')))){
+        S.blocked[q]=null;const c=b==='either'?out:b;ev.push({type:'wake',p:q,chan:c});complete(q,c,ev);
+      }
+    }
+  }
+  function fire(p){
+    const ev=[];
+    if(S.blocked[p]){ev.push({type:'already',p,chan:S.blocked[p]});return ev}
+    const c=readChan(p);
+    if(c==='either'||!S.ch[c].length){S.blocked[p]=c;ev.push({type:'block',p,chan:c});return ev}
+    complete(p,c,ev);return ev;
+  }
+  const canProgress=p=>{if(S.blocked[p])return false;const c=readChan(p);return c!=='either'&&S.ch[c].length>0};
+  const done=()=>['f','gu','gd','h'].every(p=>!canProgress(p));
+  return {S,fire,canProgress,done,readChan};
+}
+
+/* ================= state + UI ================= */
+const $=id=>document.getElementById(id);
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DECK='f f f f f gu h h gu gd gd gu h h h'.split(' ');
+const NAME={f:'f',gu:'g<sub>u</sub>',gd:'g<sub>d</sub>',h:'h'};
+const CH={in:'the input',v:'v (upper)',w:'w (lower)',t:'t (top input of h)',u:'u (bottom input of h)',either:'either input',out:'the output'};
+let K,input=[4,1,7,2,6],mode='kahn',sched=[],deckIdx=0,queue=[],busy=false,playing=null;
+function parseInput(){
+  const s=$('input').value.trim();if(!s)return [];
+  const parts=s.split(/[\s,]+/);
+  if(parts.some(x=>!/^\d{1,3}$/.test(x)))return null;
+  return parts.map(Number).slice(0,14);
+}
+function reset(){
+  stop();const p=parseInput();
+  if(p===null){$('err').textContent='Use whole numbers from 0 to 999, separated by spaces.';return}
+  $('err').textContent='';input=p;
+  mode=document.querySelector('input[name=mode]:checked').value;
+  K=makeKPN(input,mode);sched=[];deckIdx=0;queue=[];busy=false;
+  view.reset(K.S);
+  $('modenote').innerHTML=mode==='kahn'?'h reads top, bottom, top, … regardless of what has arrived. Legal Kahn process.'
+    :'<span class="warn">Not a Kahn process.</span> h reads whichever input received a token first, which means it has to test its channels.';
+  $('narr').innerHTML=input.length?`The input queue holds <b>${input.join(', ')}</b>; f will read ${input[0]} first. All channels are empty. Fire any process.`:'The input is empty. Type some numbers first.';
+  $('cmp').innerHTML='';
+  ui();
+}
+function describe(ev){
+  const out=[];let cur='';
+  const flush=()=>{if(cur){out.push(cur+'.');cur=''}};
+  for(const e of ev){
+    if(e.type==='read'){flush();
+      if(e.p==='f')cur=`f reads <b>${e.tok.val}</b>`;
+      else if(e.p==='h')cur=`h reads <b>${e.tok.val}</b> from the ${e.chan==='t'?'top':'bottom'} (${e.chan})`;
+      else cur=`${NAME[e.p]} reads <b>${e.tok.val}</b> from ${e.chan}`;
+    }else if(e.type==='send'){
+      if(e.p==='f')cur+=`: it is ${e.tok.val%2?'odd':'even'}, so it goes ${e.chan==='v'?'up on v':'down on w'}`;
+      else if(e.p==='h')cur+=' and outputs it';
+      else cur+=` and passes it on to ${e.chan}`;
+    }else if(e.type==='wake'){flush();out.push(`That is the token ${NAME[e.p]} was blocked on, so ${NAME[e.p]} <b>wakes up</b> and finishes its read.`)}
+    else if(e.type==='block'){flush();
+      if(e.p==='f')out.push('f tries to read, but the input is empty, so it <b>blocks</b> for good.');
+      else if(e.chan==='either')out.push('h tries to read, but both inputs are empty, so it <b>blocks</b> until either one gets a token.');
+      else out.push(`${NAME[e.p]} tries to read ${CH[e.chan]}, which is empty, so it <b>blocks</b>. It may not look at any other channel while it waits.`);
+    }else if(e.type==='already'){flush();out.push(`${NAME[e.p]} is still blocked waiting on ${CH[e.chan]}, so nothing happens.`)}
+  }
+  flush();return out.join(' ');
+}
+function doFire(p,label){
+  if(busy)return;
+  const ev=K.fire(p);sched.push(label||p);
+  $('narr').innerHTML=describe(ev)+(K.done()?finalNote():'');
+  busy=true;ui();
+  view.play(ev,()=>{busy=false;ui();if(playing)playing()});
+}
+function finalNote(){
+  const out=K.S.ch.out.map(t=>t.val);
+  if(!out.length)return '';
+  return ` <b>No process can make progress any more.</b> Output: ${out.join(', ')}.`+(mode==='kahn'?' Try a completely different firing order after Reset: you will get the same output.':' Run it again with a different order and the output may change.');
+}
+function ui(){
+  for(const b of document.querySelectorAll('button.proc')){
+    const p=b.dataset.p,bl=K.S.blocked[p];
+    b.classList.toggle('blocked',!!bl);
+    b.disabled=busy;
+    b.setAttribute('aria-label',`Fire ${p==='gu'?'g upper':p==='gd'?'g lower':p}${bl?', blocked waiting on '+CH[bl]:''}`);
+  }
+  $('deckstep').disabled=busy||deckIdx>=DECK.length||mode!=='kahn';
+  $('deckplay').textContent=playing&&playing.kind==='deck'?'Pause':'Play example schedule';
+  $('deckplay').disabled=(deckIdx>=DECK.length||mode!=='kahn')&&!(playing&&playing.kind==='deck');
+  $('rand').textContent=playing&&playing.kind==='rand'?'Pause':'Random schedule';
+  $('rand').disabled=K.done()&&!(playing&&playing.kind==='rand');
+  $('out').innerHTML=K.S.ch.out.length?K.S.ch.out.map(t=>`<span class="tk" style="background:var(${t.val%2?'--odd':'--even'})">${t.val}</span>`).join(''):'<span class="none">nothing yet</span>';
+  $('out').setAttribute('aria-label','Output: '+(K.S.ch.out.map(t=>t.val).join(', ')||'nothing yet'));
+  $('sched').innerHTML=sched.length?sched.map((p,i)=>`<span class="${i===sched.length-1?'last':'n'}">${NAME[p]}</span>`).join(''):'<span>–</span>';
+  $('schedn').textContent=sched.length?`(${sched.length} firing${sched.length>1?'s':''})`:'';
+}
+function stop(){playing=null;clearTimeout(stop.t)}
+const pause=()=>reduce?0:[0,900,600,380,220,90][+$('speed').value];
+function deckNext(){if(deckIdx<DECK.length){const p=DECK[deckIdx++];doFire(p)}}
+function randomNext(){
+  const ps=['f','gu','gd','h'].filter(p=>!K.S.blocked[p]);
+  if(!ps.length||K.done()){stop();ui();return}
+  doFire(ps[Math.floor(Math.random()*ps.length)]);
+}
+function startLoop(kind,next){
+  if(playing){const was=playing.kind;stop();ui();if(was===kind)return}
+  playing=function(){if(!playing)return;
+    if(kind==='deck'&&deckIdx>=DECK.length){stop();ui();return}
+    if(kind==='rand'&&K.done()){stop();ui();return}
+    stop.t=setTimeout(()=>{if(playing&&!busy)next()},pause())};
+  playing.kind=kind;ui();if(!busy)next();
+}
+document.querySelectorAll('button.proc').forEach(b=>b.addEventListener('click',()=>{stop();doFire(b.dataset.p)}));
+$('deckstep').addEventListener('click',()=>{stop();deckNext()});
+$('deckplay').addEventListener('click',()=>startLoop('deck',deckNext));
+$('rand').addEventListener('click',()=>{if(K.done()&&!playing)reset();startLoop('rand',randomNext)});
+$('reset').addEventListener('click',reset);
+$('input').addEventListener('change',reset);
+document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',reset));
+$('compare').addEventListener('click',()=>{
+  const counts={},N=200;
+  for(let i=0;i<N;i++){const k=makeKPN(input,mode);let n=0;
+    while(!k.done()&&n<2000){const ps=['f','gu','gd','h'].filter(p=>!k.S.blocked[p]);k.fire(ps[Math.floor(Math.random()*ps.length)]);n++}
+    const o=k.S.ch.out.map(t=>t.val).join(', ')||'(nothing)';counts[o]=(counts[o]||0)+1}
+  const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const ref=(()=>{const k=makeKPN(input,'kahn');let n=0;while(!k.done()&&n<2000){for(const p of ['f','gu','gd','h'])k.fire(p);n++}return k.S.ch.out.map(t=>t.val).join(', ')})();
+  $('cmp').innerHTML=`<p style="margin:0 0 6px"><b>${rows.length} different output${rows.length>1?'s':''}</b> from ${N} random schedules.${mode==='kahn'?' Determinism: the schedule cannot change the result.':' The merge is non-deterministic: the result depends on timing.'}</p><table>`+
+    rows.slice(0,8).map(([o,c])=>`<tr class="${o===ref?'ref':''}"><td>${o}</td><td>${c}</td></tr>`).join('')+'</table>'+(rows.length>8?`<p class="kbd">…and ${rows.length-8} more</p>`:'')+
+    (mode==='first'?'<p class="kbd">Highlighted: the Kahn result.</p>':'');
+});
+document.addEventListener('keydown',e=>{if(e.key!==' '||e.target.closest('button,input,select,label'))return;e.preventDefault();stop();if(mode==='kahn')deckNext();else randomNext()});
+
+/* ================= 3D view ================= */
+const view=(function(){
+  const box=$('stagebox'),canvas=$('gl');
+  let ok=false;
+  try{ok=typeof THREE!=='undefined'&&!!(canvas.getContext('webgl2')||canvas.getContext('webgl'))}catch(e){ok=false}
+  const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  if(!ok){
+    box.classList.add('nogl');
+    const flat=$('flat');
+    function draw(S){
+      const rows=[['in','Input'],['v','v: f → gu'],['w','w: f → gd'],['t','t: gu → h'],['u','u: gd → h'],['out','Output']];
+      const waits=c=>Object.entries(S.blocked).filter(([p,b])=>b===c||(b==='either'&&(c==='t'||c==='u'))).map(([p])=>p);
+      flat.innerHTML=rows.map(([c,n])=>{const w=waits(c);return `<div class="row"${w.length?' style="color:var(--block);font-weight:700"':''}><span class="nm">${n}</span>${S.ch[c].map(t=>`<span class="tk" style="background:${t.val%2?'var(--odd)':'var(--even)'}">${t.val}</span>`).join('')}</div>`}).join('')+
+        `<div class="row"><span class="nm">Blocked</span>${Object.entries(S.blocked).filter(x=>x[1]).map(([p,c])=>p+' on '+c).join(', ')||'none'}</div>`;
+    }
+    return{reset(S){draw(S)},play(ev,done){draw(K.S);done()}};
+  }
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(32,1,0.1,200);
+  scene.add(new THREE.AmbientLight(0xffffff,0.7));
+  const sun=new THREE.DirectionalLight(0xffffff,0.6);sun.position.set(-4,6,10);scene.add(sun);
+  const POS={f:new THREE.Vector3(-4,0,0),gu:new THREE.Vector3(0,2.3,0),gd:new THREE.Vector3(0,-2.3,0),h:new THREE.Vector3(4,0,0)};
+  const curves={
+    v:new THREE.CatmullRomCurve3([new THREE.Vector3(-3.2,0.55,0),new THREE.Vector3(-2.1,1.8,0),new THREE.Vector3(-0.85,2.3,0)]),
+    w:new THREE.CatmullRomCurve3([new THREE.Vector3(-3.2,-0.55,0),new THREE.Vector3(-2.1,-1.8,0),new THREE.Vector3(-0.85,-2.3,0)]),
+    t:new THREE.CatmullRomCurve3([new THREE.Vector3(0.85,2.3,0),new THREE.Vector3(2.1,1.8,0),new THREE.Vector3(3.2,0.55,0)]),
+    u:new THREE.CatmullRomCurve3([new THREE.Vector3(0.85,-2.3,0),new THREE.Vector3(2.1,-1.8,0),new THREE.Vector3(3.2,-0.55,0)])
+  };
+  const tubeMat={};
+  const mkMat=()=>new THREE.MeshStandardMaterial({color:0x8A96A6,transparent:true,opacity:.35,roughness:.6,emissive:0x000000});
+  for(const k in curves){tubeMat[k]=mkMat();scene.add(new THREE.Mesh(new THREE.TubeGeometry(curves[k],40,0.2,14,false),tubeMat[k]))}
+  tubeMat.in=mkMat();
+  const inTube=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,7.2,14),tubeMat.in);inTube.rotation.z=Math.PI/2;inTube.position.set(-8.4,0,0);scene.add(inTube);
+  const outTube=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,7.2,14),mkMat());outTube.rotation.z=Math.PI/2;outTube.position.set(8.4,0,0);scene.add(outTube);
+  // 'waiting here' markers: a pulsing ring where the missing token would arrive, plus a label
+  const markers={};
+  const markMat=new THREE.MeshBasicMaterial({color:0xC62828,transparent:true,opacity:.9});
+  const HEAD={v:curves.v.getPointAt(0.86),w:curves.w.getPointAt(0.86),t:curves.t.getPointAt(0.86),u:curves.u.getPointAt(0.86),in:new THREE.Vector3(-5.4,0,0)};
+  for(const c in HEAD){
+    const g=new THREE.Group();g.position.copy(HEAD[c]).setZ(0.05);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.42,0.06,12,48),markMat);g.add(ring);
+    const slot=new THREE.Mesh(new THREE.CircleGeometry(0.3,32),new THREE.MeshBasicMaterial({color:0xC62828,transparent:true,opacity:.18}));g.add(slot);
+    const lab=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false}));lab.scale.set(3.4,0.85,1);
+    const below=(c==='w'||c==='u');lab.position.set(c==='in'?0:0,below?-0.95:0.95,0.4);g.add(lab);
+    g.visible=false;scene.add(g);markers[c]={g,ring,lab};
+  }
+  function textTex(text,size,color,w=256,h=128,bold=true){
+    const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+    g.fillStyle=color;g.font=`${bold?700:400} ${size}px "Atkinson Hyperlegible", Arial, sans-serif`;g.textAlign='center';g.textBaseline='middle';
+    g.fillText(text,w/2,h/2+4);const t=new THREE.CanvasTexture(c);return t;
+  }
+  // processes
+  const procs={};
+  const PLAB={f:['f',''],gu:['g','u'],gd:['g','d'],h:['h','']};
+  function procTex([main,sub]){
+    const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');
+    g.fillStyle='#1C2430';g.textBaseline='alphabetic';
+    g.font='700 96px "Atkinson Hyperlegible", Arial, sans-serif';const wm=g.measureText(main).width;
+    g.font='700 54px "Atkinson Hyperlegible", Arial, sans-serif';const ws=sub?g.measureText(sub).width+4:0;
+    const x0=128-(wm+ws)/2;
+    g.font='700 96px "Atkinson Hyperlegible", Arial, sans-serif';g.fillText(main,x0,92);
+    if(sub){g.font='700 54px "Atkinson Hyperlegible", Arial, sans-serif';g.fillText(sub,x0+wm+4,112)}
+    return new THREE.CanvasTexture(c);
+  }
+  for(const p in POS){
+    const g=new THREE.Group();g.position.copy(POS[p]);
+    const mat=new THREE.MeshStandardMaterial({color:0xF2F5F9,roughness:.55});
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.85,0.85,0.55,48),mat);body.rotation.x=Math.PI/2;body.userData.p=p;g.add(body);
+    const ringMat=new THREE.MeshStandardMaterial({color:0xB9C3D0,roughness:.5,emissive:0x000000});
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.88,0.07,12,64),ringMat);ring.position.z=0.3;g.add(ring);
+    const lab=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.7),new THREE.MeshBasicMaterial({map:procTex(PLAB[p]),transparent:true}));lab.position.z=0.29;g.add(lab);
+    const note=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false}));note.scale.set(3.2,0.8,1);note.position.set(0,p==='gd'?-1.45:1.45,0.4);note.visible=false;g.add(note);
+    scene.add(g);procs[p]={g,body,ring,ringMat,note,pulse:0};
+  }
+  const chanLabels=[['v',-2.6,1.75],['w',-2.6,-1.75],['t',2.6,1.75],['u',2.6,-1.75],['input',-8.4,0.75],['output',8.4,0.75]];
+  const labelMats=[];
+  chanLabels.forEach(([n,x,y])=>{const m=new THREE.SpriteMaterial({transparent:true,depthTest:false});labelMats.push([m,n]);const s=new THREE.Sprite(m);s.scale.set(n.length>1?2:0.9,0.5,1);s.position.set(x,y,0.3);scene.add(s)});
+  // tokens
+  const tokens=new Map();
+  const tokGeo=new THREE.SphereGeometry(0.34,32,20);
+  function tokenMesh(tok){
+    if(tokens.has(tok.id))return tokens.get(tok.id);
+    const mat=new THREE.MeshStandardMaterial({color:new THREE.Color(css(tok.val%2?'--odd':'--even')),roughness:.35});
+    const m=new THREE.Mesh(tokGeo,mat);
+    const lab=new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(String(tok.val),86,'#FFFFFF',128,128),transparent:true,depthTest:false}));lab.scale.set(0.62,0.62,1);lab.position.z=0.36;m.add(lab);
+    m.userData={tok,place:null,target:new THREE.Vector3()};scene.add(m);tokens.set(tok.id,m);return m;
+  }
+  // visual model: token id -> {chan, order} or {proc}
+  let order=0;
+  function layout(){
+    const byChan={};
+    tokens.forEach(m=>{const pl=m.userData.place;if(pl&&pl.chan){(byChan[pl.chan]=byChan[pl.chan]||[]).push(m)}});
+    for(const c in byChan){
+      const arr=byChan[c].sort((a,b)=>a.userData.place.order-b.userData.place.order);
+      arr.forEach((m,i)=>{
+        const T=m.userData.target;
+        if(c==='in')T.set(-5.4-i*0.85,0,0.05);
+        else if(c==='out'){const n=arr.length;T.set(5.4+(n-1-i)*0.85,0,0.05)}
+        else{const sp=Math.min(0.2,0.75/Math.max(arr.length,1));T.copy(curves[c].getPointAt(Math.max(0.06,0.86-i*sp)));T.z=0.05}
+      });
+    }
+    tokens.forEach(m=>{const pl=m.userData.place;if(pl&&pl.proc)m.userData.target.copy(POS[pl.proc]).setZ(0.65)});
+  }
+  function setBlocked(S){
+    const red=css('--block');
+    for(const c in tubeMat){tubeMat[c].color.set(0x8A96A6);tubeMat[c].opacity=.35;tubeMat[c].emissive.set(0x000000)}
+    for(const c in markers)markers[c].g.visible=false;
+    markMat.color.set(red);
+    for(const p in procs){const b=S.blocked[p],P=procs[p];
+      P.ringMat.color.set(b?red:'#B9C3D0');P.ringMat.emissive.set(b?red:'#000000');P.ringMat.emissiveIntensity=b?0.35:0;
+      P.note.visible=false;
+      if(!b)continue;
+      const who=p==='gu'?'upper g':p==='gd'?'lower g':p;
+      const chans=b==='either'?['t','u']:[b];
+      for(const c of chans){
+        if(tubeMat[c]){tubeMat[c].color.set(red);tubeMat[c].opacity=.7;tubeMat[c].emissive.set(red);tubeMat[c].emissiveIntensity=.25}
+      }
+    }
+  }
+  function colors(){
+    scene.background=new THREE.Color(css('--stage'));
+    labelMats.forEach(([m,n])=>{m.map=textTex(n,n.length>1?52:60,css('--muted'),n.length>1?320:128,96,true);m.needsUpdate=true});
+    tokens.forEach(m=>m.material.color.set(css(m.userData.tok.val%2?'--odd':'--even')));
+    if(K)setBlocked(K.S);
+  }
+  function size(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;
+    camera.fov=w/h<1.3?52:w/h<1.7?40:32;camera.updateProjectionMatrix()}
+  new ResizeObserver(size).observe(canvas);size();
+  if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',colors);
+  new MutationObserver(colors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{colors();for(const p in procs){procs[p].g.children[2].material.map=procTex(PLAB[p]);procs[p].g.children[2].material.needsUpdate=true}});
+  colors();
+  // picking
+  const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+  function pick(e){const r=canvas.getBoundingClientRect();mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(mouse,camera);
+    const hit=ray.intersectObjects(Object.values(procs).map(P=>P.body));return hit.length?hit[0].object.userData.p:null}
+  canvas.addEventListener('pointermove',e=>{canvas.style.cursor=pick(e)?'pointer':'default'});
+  canvas.addEventListener('click',e=>{const p=pick(e);if(p){stop();doFire(p)}});
+  // tilt
+  function frame(now){
+    requestAnimationFrame(frame);
+    const k=reduce?1:0.16;
+    tokens.forEach(m=>{m.position.lerp(m.userData.target,k)});
+    for(const p in procs){const P=procs[p];P.pulse*=0.9;P.g.scale.setScalar(1+P.pulse*0.12)}
+    camera.position.set(0.3,-3.4,17.5);camera.lookAt(0.3,-0.1,0);
+    renderer.render(scene,camera);
+  }
+  requestAnimationFrame(frame);
+  return{
+    reset(S){tokens.forEach(m=>{scene.remove(m);m.material.dispose()});tokens.clear();order=0;
+      S.ch.in.forEach(t=>{const m=tokenMesh(t);m.userData.place={chan:'in',order:order++}});layout();tokens.forEach(m=>m.position.copy(m.userData.target));setBlocked(S)},
+    play(ev,done){
+      const d=reduce?0:[0,700,500,330,200,90][+$('speed').value];
+      let i=0;
+      (function next(){
+        if(i>=ev.length){setBlocked(K.S);done();return}
+        const e=ev[i++];
+        if(e.type==='read'){const m=tokenMesh(e.tok);m.userData.place={proc:e.p};procs[e.p].pulse=1}
+        if(e.type==='send'){const m=tokenMesh(e.tok);m.userData.place={chan:e.chan,order:order++}}
+        if(e.type==='block'||e.type==='already'){setBlocked(K.S);procs[e.p].pulse=1}
+        if(e.type==='wake'){setBlocked(K.S);procs[e.p].pulse=1}
+        layout();
+        setTimeout(next,e.type==='send'||e.type==='read'?d:d*1.2);
+      })();
+    }
+  };
+})();
+
+reset();
+})();
+</script>
+</body>
+</html>

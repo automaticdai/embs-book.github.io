@@ -12,6 +12,9 @@ These rules make the output token sequences deterministic for given inputs, inde
 
 An implementation has finite buffers. If writes block because those buffers fill, it introduces behaviour absent from the unbounded model. Buffer sizing and scheduling are therefore part of the implementation argument. Bounded-memory execution is undecidable for general KPNs.
 
+!!! tip "Interactive tutorial"
+    Be the scheduler for the lecture's even/odd network in the [KPN tutorial](../tutorials/kpn-scheduler.md). Fire the processes in any order and the output does not change; switch the merge to “first available” and it does.
+
 ## The SDF restriction
 
 In **synchronous dataflow**, every actor consumes and produces a fixed, known number of tokens on each port per firing. These rates permit static analysis. Here “synchronous” refers to predictable token rates; it does not require all actors to run at the same physical instant.
