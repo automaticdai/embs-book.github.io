@@ -3,409 +3,577 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diffusion algorithm — interactive tutorial</title>
+<title>Diffusion Load Balancing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --color-background-primary: #ffffff;
-  --color-background-secondary: #f5f4ef;
-  --color-background-tertiary: #eeece5;
-  --color-text-primary: #1a1a18;
-  --color-text-secondary: #5f5e5a;
-  --color-text-info: #185FA5;
-  --color-border-tertiary: rgba(0,0,0,0.15);
-  --color-border-secondary: rgba(0,0,0,0.30);
-  --color-border-info: #378ADD;
-  --color-flow-in: #085041;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+:root{
+  --bg:#E8EDF1; --surface:#FFFFFF; --stage:#F3F6F8; --ink:#15212B; --muted:#5B6B78; --line:#D3DCE3;
+  --accent:#1F7F75; --accent-ink:#FFFFFF; --flow:#1F7F75; --cool:#3A74C4; --mid:#93A5B3; --warm:#DD6B2A;
+  --warn:#C0392B; --rim:#7F93A3;
+  color-scheme:light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background-primary: #232321;
-    --color-background-secondary: #2d2d2a;
-    --color-background-tertiary: #1a1a18;
-    --color-text-primary: #ebe9e0;
-    --color-text-secondary: #b4b2a9;
-    --color-text-info: #85B7EB;
-    --color-border-tertiary: rgba(255,255,255,0.15);
-    --color-border-secondary: rgba(255,255,255,0.30);
-    --color-border-info: #85B7EB;
-    --color-flow-in: #5DCAA5;
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171C; --surface:#1A2229; --stage:#141B21; --ink:#E4EAEF; --muted:#9AAAB7; --line:#2F3C47;
+    --accent:#5CC2B5; --accent-ink:#11171C; --flow:#5CC2B5; --cool:#3F7BD0; --mid:#5E7282; --warm:#D26A2C;
+    --warn:#FF7B6B; --rim:#7C8E9C; color-scheme:dark;
   }
 }
-</style>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-.dw{font-family:var(--font-sans);width:100%;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;display:flex;flex-direction:column;background:var(--color-background-primary)}
-.dtopbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);flex-shrink:0}
-.dtitle{font-size:13px;font-weight:500;color:var(--color-text-primary)}
-.chip{font-size:11px;padding:2px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);font-family:var(--font-mono);color:var(--color-text-secondary)}
-.chip-s{color:var(--color-text-info)}
-.tsep{flex:1}
-.dmain{display:flex;height:390px}
-.dgraph{flex:1;position:relative;background:var(--color-background-tertiary);overflow:hidden}
-.dsvg{width:100%;height:100%;display:block}
-.dinfo{width:272px;flex-shrink:0;border-left:0.5px solid var(--color-border-tertiary);overflow-y:auto;display:flex;flex-direction:column;background:var(--color-background-primary)}
-.dinfo::-webkit-scrollbar{width:3px}
-.dinfo::-webkit-scrollbar-thumb{background:var(--color-border-secondary);border-radius:2px}
-.isec{padding:11px 14px;border-bottom:0.5px solid var(--color-border-tertiary)}
-.ilabel{font-size:9px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:7px}
-.sdesc{font-size:12px;line-height:1.65;color:var(--color-text-primary);padding-left:9px;border-left:2px solid var(--color-border-info);border-radius:0 2px 2px 0}
-.dt{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--font-mono)}
-.dt th{font-size:9px;color:var(--color-text-secondary);text-align:left;padding:3px 3px;border-bottom:0.5px solid var(--color-border-tertiary);font-family:var(--font-sans);font-weight:500;letter-spacing:.05em;text-transform:uppercase}
-.dt td{padding:4px 3px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);vertical-align:middle}
-.dt tr:last-child td{border-bottom:none}
-.sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
-.du{color:#BA7517}.dd{color:var(--color-flow-in)}.dz{color:var(--color-text-secondary)}
-.cbg{height:4px;background:var(--color-background-secondary);border-radius:2px;overflow:hidden;margin-top:5px}
-.cfill{height:100%;background:#1D9E75;border-radius:2px;transition:width .45s ease}
-.cmeta{display:flex;justify-content:space-between;font-size:10px;font-family:var(--font-mono);color:var(--color-text-secondary);margin-top:4px}
-.fmla{font-size:11px;font-family:var(--font-mono);color:var(--color-text-secondary);line-height:1.8;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px}
-.legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--color-text-secondary)}
-.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.leg-line{width:18px;height:3px;border-radius:2px;flex-shrink:0}
-.dctrls{display:flex;align-items:center;gap:6px;padding:8px 12px;border-top:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);flex-shrink:0;flex-wrap:wrap}
-button{height:28px;padding:0 11px;font-size:12px;font-weight:500;cursor:pointer;border-radius:var(--border-radius-md);font-family:var(--font-sans)}
-.csep{flex:1}
-body{background:var(--color-background-tertiary);color:var(--color-text-primary);font-family:var(--font-sans);padding:12px}
-button{background:var(--color-background-primary);color:var(--color-text-primary);border:0.5px solid var(--color-border-secondary)}
-button:hover:not(:disabled){border-color:var(--color-border-info)}
-button:disabled{opacity:.45;cursor:default}
-button:focus-visible{outline:2px solid var(--color-border-info);outline-offset:2px}
-.dsvg{touch-action:none}
-@media (max-width:640px){
-  .dmain{flex-direction:column;height:auto}
-  .dgraph{height:300px;flex:none}
-  .dinfo{width:auto;border-left:none;border-top:0.5px solid var(--color-border-tertiary)}
+:root[data-theme="dark"]{
+  --bg:#11171C; --surface:#1A2229; --stage:#141B21; --ink:#E4EAEF; --muted:#9AAAB7; --line:#2F3C47;
+  --accent:#5CC2B5; --accent-ink:#11171C; --flow:#5CC2B5; --cool:#3F7BD0; --mid:#5E7282; --warm:#D26A2C;
+  --warn:#FF7B6B; --rim:#7C8E9C; color-scheme:dark;
 }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;padding:10px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.app{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+
+.top{display:flex;align-items:baseline;gap:6px 18px;flex-wrap:wrap;padding:12px 16px 8px}
+.top h1{font-size:19px;font-weight:700;letter-spacing:-.005em;margin-right:auto}
+.stat{font-size:14px;color:var(--muted);white-space:nowrap}
+.stat b{color:var(--ink);font-weight:700}
+.stat.bad b{color:var(--warn)}
+
+.opts{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding:0 16px 12px;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
+.opts label{display:flex;align-items:center;gap:7px}
+.opts label[hidden]{display:none}
+select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 8px;max-width:100%}
+input[type=range]{width:120px;accent-color:var(--accent)}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent)}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 300px;height:max(440px,calc(100vh - 200px))}
+.stage{display:flex;flex-direction:column;min-width:0;background:var(--stage);border-right:1px solid var(--line)}
+.canvas{flex:1;min-height:0;position:relative}
+.canvas svg{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.narr{margin:0 12px 12px;padding:9px 12px;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 8px 8px 0;font-size:14.5px;min-height:3.9em}
+.narr.bad{border-left-color:var(--warn)}
+
+.panel{display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;font:inherit;font-size:14px;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:3px solid transparent;padding:10px 4px 8px;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabbody{flex:1;overflow-y:auto;padding:14px 16px}
+.tabbody[hidden]{display:none}
+.tabbody h2{font-size:15px;font-weight:700;margin:0 0 8px}
+.tabbody h2+p,.hint{font-size:13.5px;color:var(--muted);margin-bottom:10px}
+.calc{font-size:13.5px;line-height:1.9;background:var(--stage);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:nowrap}
+.calc .q{color:var(--muted)}
+.calc b{font-size:15px}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:12.5px;color:var(--muted);font-weight:700;text-align:left;padding:4px 4px;border-bottom:1px solid var(--line)}
+td{padding:5px 4px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+.r{text-align:right}
+tr.sel td{background:var(--stage)}
+td input{width:64px;font:inherit;font-size:14px;text-align:right;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.up{color:var(--warm)}.down{color:var(--cool)}.none{color:var(--muted)}
+.neg{color:var(--warn);font-weight:700}
+.sub{margin-top:16px}
+.sub[hidden]{display:none}
+
+.spark{width:100%;height:150px;display:block;margin:4px 0 6px}
+.sparkkey{display:flex;gap:14px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.sparkkey i{display:inline-block;width:18px;height:0;border-top:3px solid var(--warm);vertical-align:middle;margin-right:5px}
+.sparkkey i.p{border-top:2px dashed var(--cool)}
+.big{font-size:26px;font-weight:700;line-height:1.1}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.facts div{font-size:13px;color:var(--muted)}
+
+.ctrls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--line)}
+.ctrls .sp{flex:1}
+button.b{font:inherit;font-size:15px;font-weight:700;height:38px;padding:0 15px;border-radius:8px;cursor:pointer;border:2px solid var(--accent);background:transparent;color:var(--accent)}
+button.b.pri{background:var(--accent);color:var(--accent-ink)}
+button.b:disabled{opacity:.4;cursor:default}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.keys{font-size:13px;color:var(--muted)}
+
+@media (max-width:760px){
+  .main{grid-template-columns:minmax(0,1fr) 270px}
+  .keys{display:none}
+}
+@media (max-width:580px){
+  body{padding:4px}
+  .main{grid-template-columns:1fr;height:auto}
+  .stage{border-right:none;border-bottom:1px solid var(--line)}
+  .canvas{height:300px;flex:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="dw">
-  <div class="dtopbar">
-    <span class="dtitle">Diffusion algorithm</span>
-    <span class="chip chip-s" id="cstep">Initial</span>
-    <span class="chip" id="calpha">α = —</span>
-    <div class="tsep"></div>
-    <span class="chip" id="ctotal">total load: —</span>
+<div class="app">
+  <header class="top">
+    <h1>Diffusion load balancing</h1>
+    <span class="stat">Step <b id="sstep">0</b></span>
+    <span class="stat">α <b id="salph">—</b></span>
+    <span class="stat" id="sgam" title="How much of the imbalance is left after each step">γ <b>—</b></span>
+    <span class="stat">Average <b id="savg">—</b></span>
+  </header>
+  <div class="opts">
+    <label>Graph
+      <select id="sgraph">
+        <option value="lecture">Lecture example</option>
+        <option value="path">Path of 5</option>
+        <option value="ring">Ring of 6</option>
+        <option value="hub">Hub with a tail</option>
+        <option value="complete">Complete graph K5</option>
+        <option value="random">Random</option>
+      </select>
+    </label>
+    <label>α
+      <select id="salpha">
+        <option value="global">1/(Δ+1) on every edge</option>
+        <option value="local">1/(max(deg i, deg j)+1) per edge</option>
+        <option value="lecture">0.5, as in the slides</option>
+        <option value="custom">Custom</option>
+      </select>
+    </label>
+    <label id="lcustom" hidden><input type="range" id="ralpha" min="0.02" max="0.6" step="0.01" value="0.2"><b id="valpha" class="mono">0.20</b></label>
+    <label title="Each flow is rounded down to a whole number of tasks"><input type="checkbox" id="cint">Whole tasks only</label>
   </div>
-  <div class="dmain">
-    <div class="dgraph">
-      <svg class="dsvg" id="dsvg" viewBox="0 0 520 370" preserveAspectRatio="xMidYMid meet"></svg>
-    </div>
-    <div class="dinfo">
-      <div class="isec">
-        <div class="ilabel">What's happening</div>
-        <div class="sdesc" id="sdesc">—</div>
+
+  <div class="main">
+    <section class="stage">
+      <div class="canvas"><svg id="dsvg" role="img" aria-label="Processor graph with node loads and edge flows"></svg></div>
+      <p class="narr" id="narr" aria-live="polite">—</p>
+    </section>
+    <aside class="panel">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="t-node" aria-selected="true" aria-controls="p-node">This node</button>
+        <button role="tab" id="t-loads" aria-selected="false" aria-controls="p-loads">Loads</button>
+        <button role="tab" id="t-conv" aria-selected="false" aria-controls="p-conv">Convergence</button>
       </div>
-      <div class="isec">
-        <div class="ilabel">Node loads</div>
-        <table class="dt"><thead><tr><th>Node</th><th style="text-align:right">Load</th><th style="text-align:right">Δ</th></tr></thead>
-        <tbody id="ltbody"></tbody></table>
+      <div class="tabbody" id="p-node" role="tabpanel">
+        <h2 id="nhead">—</h2>
+        <p>What the next step does to this node. Click another node to switch.</p>
+        <div class="calc mono" id="calc">—</div>
+        <p class="hint" style="margin-top:12px">Each term moves α times the difference with one neighbour. Every term uses the loads from the current step.</p>
       </div>
-      <div class="isec" id="fsec" style="display:none">
-        <div class="ilabel">Edge flows this step</div>
-        <table class="dt"><thead><tr><th>Edge</th><th>Direction</th><th style="text-align:right">|flow|</th></tr></thead>
-        <tbody id="ftbody"></tbody></table>
-      </div>
-      <div class="isec">
-        <div class="ilabel">Load balance — σ across all nodes</div>
-        <div class="cbg"><div class="cfill" id="cfill" style="width:0%"></div></div>
-        <div class="cmeta"><span>σ high</span><span id="cval">σ = —</span><span>σ = 0</span></div>
-        <div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px;line-height:1.5">σ = std dev of all node loads. One value per step — not per edge. σ = 0 means perfectly balanced.</div>
-      </div>
-      <div class="isec">
-        <div class="ilabel">Color key</div>
-        <div class="legend">
-          <div class="leg-item"><div class="leg-dot" style="background:#085041"></div>low load</div>
-          <div class="leg-item"><div class="leg-dot" style="background:#BA7517"></div>mid load</div>
-          <div class="leg-item"><div class="leg-dot" style="background:#993C1D"></div>high load</div>
-          <div class="leg-item"><div class="leg-line" style="background:#BA7517"></div>flow out</div>
-          <div class="leg-item"><div class="leg-line" style="background:var(--color-flow-in)"></div>flow in</div>
+      <div class="tabbody" id="p-loads" role="tabpanel" hidden>
+        <table><thead><tr><th>Node</th><th class="r">Degree</th><th class="r">Load</th><th class="r">Change</th></tr></thead><tbody id="ltbody"></tbody></table>
+        <p class="hint" id="lnote" style="margin-top:8px">Type new starting loads here, before the first step.</p>
+        <div class="sub" id="fsec" hidden>
+          <h2>Flows in the last step</h2>
+          <table><thead><tr><th>Edge</th><th class="r">α</th><th>Direction</th><th class="r">Amount</th></tr></thead><tbody id="ftbody"></tbody></table>
         </div>
       </div>
-      <div class="isec">
-        <div class="ilabel">Algorithm</div>
-        <div class="fmla">
-          flow(u,v) = α × (L<sub>u</sub> − L<sub>v</sub>)<br>
-          α = 1 / (max_degree + 1)<br>
-          L<sub>new</sub>[u] = L[u] − Σ flows out
+      <div class="tabbody" id="p-conv" role="tabpanel" hidden>
+        <div class="facts">
+          <div><span class="big" id="csd">—</span><br>imbalance σ now</div>
+          <div><span class="big" id="cgam">—</span><br>γ, share of σ left per step</div>
         </div>
+        <svg class="spark" id="spark" viewBox="0 0 270 150" preserveAspectRatio="none" aria-label="Imbalance at each step, log scale"></svg>
+        <div class="sparkkey"><span><i></i>measured σ</span><span><i class="p"></i>predicted σ₀·γᵏ</span></div>
+        <p class="hint" style="margin-top:10px" id="cnote">—</p>
       </div>
-    </div>
+    </aside>
   </div>
-  <div class="dctrls">
-    <button id="bprev">◀ Prev</button>
-    <button id="bnext">Next ▶</button>
-    <button id="bauto">▷ Auto</button>
-    <button id="breset">↺ Reset</button>
-    <div class="csep"></div>
-    <button id="brand">Randomize graph</button>
-  </div>
+
+  <footer class="ctrls">
+    <button class="b" id="bprev">◀ Back</button>
+    <button class="b pri" id="bnext">Next step ▶</button>
+    <button class="b" id="bauto">Play</button>
+    <button class="b" id="breset">Reset</button>
+    <span class="sp"></span>
+    <span class="keys">Arrow keys to step, Space to play</span>
+    <button class="b" id="brand">New random graph</button>
+  </footer>
 </div>
 
 <script>
-const VW=520,VH=370,NR=25;
-let nodes=[],edges=[],history=[],curStep=0,autoTmr=null,dragId=null,dragOx=0,dragOy=0;
+const NR=32,MAXSTEP=150,EPS=0.005;
+let nodes=[],edges=[],history=[],curStep=0,autoTmr=null,sel=0,cap=1,drag=null;
+let view={x:0,y:0,w:520,h:420};
 
-// Palette: teal (low) → amber (mid) → coral (high)
-// Using stops from the design system ramps
-const RAMP_LOW  = [[4,52,41],[8,80,65],[15,158,117]];   // teal 900→800→600
-const RAMP_MID  = [[186,117,23],[239,159,39],[250,199,117]]; // amber 600→400→200
-const RAMP_HIGH = [[153,60,29],[216,90,48],[240,153,123]]; // coral 600→400→200
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt=(x,d=2)=>{const s=(Math.abs(x)<5e-10?0:x).toFixed(d);return s.includes('.')?s.replace(/0+$/,'').replace(/\.$/,''):s;};
+const frac=a=>Math.abs(1/a-Math.round(1/a))<1e-9?`1/${Math.round(1/a)}`:fmt(a,3);
 
-function lerpColor(c1,c2,t){
-  return c1.map((v,i)=>Math.round(v+(c2[i]-v)*t));
+// Node colour: cool below the average, warm above it
+function hexRgb(h){const v=parseInt(h.slice(1),16);return[v>>16&255,v>>8&255,v&255];}
+function nodeColor(load,mean,spread){
+  const mid=hexRgb(css('--mid'));
+  if(spread<1e-9)return`rgb(${mid})`;
+  const r=Math.max(-1,Math.min(1,(load-mean)/spread)),t=Math.sqrt(Math.abs(r));
+  const to=hexRgb(css(r<0?'--cool':'--warm'));
+  return`rgb(${mid.map((v,i)=>Math.round(v+(to[i]-v)*t))})`;
 }
 
-function nodeColor(load,minL,maxL){
-  if(maxL===minL)return`rgb(8,80,65)`;
-  const t=(load-minL)/(maxL-minL);
-  let r,g,b;
-  if(t<0.5){
-    const s=t*2;
-    const c=lerpColor(RAMP_LOW[0],RAMP_MID[1],s);
-    [r,g,b]=c;
-  } else {
-    const s=(t-0.5)*2;
-    const c=lerpColor(RAMP_MID[1],RAMP_HIGH[0],s);
-    [r,g,b]=c;
-  }
-  return`rgb(${r},${g},${b})`;
-}
+// ---------- graphs ----------
+const PRESETS={
+  // Lecture slides 25–34: loads 14, 4, 7, 1; B is linked to A, C and D
+  lecture:()=>({
+    nodes:[[90,210],[250,210],[400,95],[400,325]],
+    edges:[[0,1],[1,2],[1,3],[2,3]],
+    loads:[14,4,7,1]}),
+  path:()=>({
+    nodes:[0,1,2,3,4].map(i=>[60+i*100,210+(i%2?-55:55)]),
+    edges:[[0,1],[1,2],[2,3],[3,4]],
+    loads:[20,0,0,0,0]}),
+  ring:()=>({
+    nodes:[0,1,2,3,4,5].map(i=>{const a=i/6*2*Math.PI-Math.PI/2;return[260+Math.cos(a)*160,210+Math.sin(a)*140];}),
+    edges:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]],
+    loads:[18,0,0,0,0,0]}),
+  hub:()=>({
+    nodes:[[150,210],[50,95],[50,325],[150,360],[270,210],[380,130],[490,210]],
+    edges:[[0,1],[0,2],[0,3],[0,4],[4,5],[5,6]],
+    loads:[2,2,2,2,2,2,23]}),
+  complete:()=>({
+    nodes:[0,1,2,3,4].map(i=>{const a=i/5*2*Math.PI-Math.PI/2;return[260+Math.cos(a)*170,220+Math.sin(a)*150];}),
+    edges:[[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]],
+    loads:[20,0,5,0,0]}),
+  random:randomGraph
+};
 
-// Text color: always white (these are all dark-enough fills)
-const NODE_TEXT='white';
-
-// Flow colors: amber (load flowing out = positive) and teal (load flowing in = negative)
-const FLOW_OUT='#BA7517'; // amber-600
-const FLOW_IN =getComputedStyle(document.documentElement).getPropertyValue('--color-flow-in').trim()||'#085041';
-const FLOW_NIL='#94a3b8';
-
-function flowCol(f){return f>0.004?FLOW_OUT:f<-0.004?FLOW_IN:FLOW_NIL;}
-
-function setDefault(){
-  nodes=[{id:0,label:'A',x:130,y:280},{id:1,label:'B',x:130,y:90},{id:2,label:'C',x:390,y:90},{id:3,label:'D',x:390,y:280}];
-  edges=[{u:0,v:1},{u:1,v:2},{u:2,v:3},{u:0,v:3},{u:1,v:3}];
-  history=[{loads:[4,1,14,7],flows:null,alpha:null}];
-  curStep=0;
-}
-
-function randomize(){
-  const n=4+Math.floor(Math.random()*3);
-  const lbls='ABCDEFG'.slice(0,n).split('');
-  const cx=VW/2,cy=VH/2,r=Math.min(VW,VH)*0.30;
-  nodes=lbls.map((l,i)=>{
+function randomGraph(){
+  const n=5+Math.floor(Math.random()*3);
+  const pos=[...Array(n).keys()].map(i=>{
     const a=(i/n)*2*Math.PI-Math.PI/2;
-    return{id:i,label:l,x:Math.round(cx+Math.cos(a)*r+(Math.random()-.5)*35),y:Math.round(cy+Math.sin(a)*r+(Math.random()-.5)*35)};
+    return[Math.round(260+Math.cos(a)*175+(Math.random()-.5)*30),Math.round(210+Math.sin(a)*145+(Math.random()-.5)*30)];
   });
-  const es=new Set(); edges=[];
-  const inT=new Set([0]);
-  while(inT.size<n){
-    const u=[...inT][Math.floor(Math.random()*inT.size)];
-    const pool=[...Array(n).keys()].filter(v=>!inT.has(v));
-    const v=pool[Math.floor(Math.random()*pool.length)];
-    const k=`${Math.min(u,v)}-${Math.max(u,v)}`;
-    if(!es.has(k)){es.add(k);edges.push({u,v});}
-    inT.add(v);
-  }
-  for(let t=0;t<25&&edges.length<n+1;t++){
-    const u=Math.floor(Math.random()*n),v=Math.floor(Math.random()*n);
-    if(u===v)continue;
-    const k=`${Math.min(u,v)}-${Math.max(u,v)}`;
-    if(!es.has(k)){es.add(k);edges.push({u,v});}
-  }
-  const base=Math.round(n*6);
-  const loads=[];
-  for(let i=0;i<n-1;i++){
-    const rem=base-loads.reduce((a,b)=>a+b,0)-(n-1-i);
-    loads.push(Math.max(1,Math.floor(Math.random()*Math.min(rem,base*0.6))+1));
-  }
-  loads.push(Math.max(1,base-loads.reduce((a,b)=>a+b,0)));
-  for(let i=loads.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[loads[i],loads[j]]=[loads[j],loads[i]];}
-  history=[{loads,flows:null,alpha:null}];
-  curStep=0;
+  const es=new Set(),E=[];
+  const add=(u,v)=>{const k=`${Math.min(u,v)}-${Math.max(u,v)}`;if(u!==v&&!es.has(k)){es.add(k);E.push([u,v]);}};
+  // random spanning tree keeps the graph connected
+  for(let v=1;v<n;v++)add(Math.floor(Math.random()*v),v);
+  for(let t=0;t<40&&E.length<n+2;t++)add(Math.floor(Math.random()*n),Math.floor(Math.random()*n));
+  const loads=[...Array(n)].map(()=>Math.floor(Math.random()*16));
+  loads[Math.floor(Math.random()*n)]+=10;
+  return{nodes:pos,edges:E,loads};
 }
 
-function getDeg(){
+function loadGraph(key){
+  const g=PRESETS[key]();
+  nodes=g.nodes.map(([x,y],i)=>({id:i,label:'ABCDEFGH'[i],x,y}));
+  edges=g.edges.map(([u,v])=>({u,v}));
+  history=[{loads:g.loads.slice(),flows:null}];
+  curStep=0;
+  sel=g.loads.indexOf(Math.max(...g.loads));
+  fitView();
+  refreshAlpha();
+}
+
+// Frame the graph tightly so the nodes are drawn as large as possible
+function fitView(){
+  const xs=nodes.map(n=>n.x),ys=nodes.map(n=>n.y);
+  const x0=Math.min(...xs)-NR-30,x1=Math.max(...xs)+NR+30;
+  const y0=Math.min(...ys)-NR-34,y1=Math.max(...ys)+NR+34;
+  view={x:x0,y:y0,w:x1-x0,h:y1-y0};
+  svg.setAttribute('viewBox',`${x0} ${y0} ${view.w} ${view.h}`);
+}
+
+// ---------- algorithm ----------
+let alphas=[],gamma=1;
+
+function degrees(){
   const d=new Array(nodes.length).fill(0);
   edges.forEach(e=>{d[e.u]++;d[e.v]++;});
   return d;
 }
 
-function getAlpha(){return 1/(Math.max(...getDeg())+1);}
+function refreshAlpha(){
+  const mode=$('salpha').value,deg=degrees(),D=Math.max(...deg);
+  if(mode==='global')alphas=edges.map(()=>1/(D+1));
+  else if(mode==='local')alphas=edges.map(e=>1/(Math.max(deg[e.u],deg[e.v])+1));
+  else if(mode==='lecture')alphas=edges.map(()=>0.5);
+  else alphas=edges.map(()=>+$('ralpha').value);
+  gamma=contraction();
+  // the stored steps were computed with the old α
+  history=[history[0]];curStep=0;
+  // bucket scale: the fullest starting node fills most of its circle
+  cap=Math.max(...history[0].loads,1)*1.1;
+}
+
+// W = I − αL. Its eigenvalue 1 belongs to the balanced vector; γ is the largest
+// |eigenvalue| among the rest and sets how fast the imbalance decays.
+function contraction(){
+  const n=nodes.length,W=[...Array(n)].map((_,i)=>[...Array(n)].map((_,j)=>i===j?1:0));
+  edges.forEach((e,k)=>{const a=alphas[k];W[e.u][e.u]-=a;W[e.v][e.v]-=a;W[e.u][e.v]+=a;W[e.v][e.u]+=a;});
+  const ev=jacobiEigenvalues(W);
+  let one=0;ev.forEach((x,i)=>{if(Math.abs(x-1)<Math.abs(ev[one]-1))one=i;});
+  ev.splice(one,1);
+  return Math.max(0,...ev.map(Math.abs));
+}
+
+function jacobiEigenvalues(M){
+  const n=M.length,A=M.map(r=>r.slice());
+  for(let sweep=0;sweep<100;sweep++){
+    let off=0;
+    for(let p=0;p<n;p++)for(let q=p+1;q<n;q++)off+=A[p][q]**2;
+    if(off<1e-20)break;
+    for(let p=0;p<n;p++)for(let q=p+1;q<n;q++){
+      if(Math.abs(A[p][q])<1e-15)continue;
+      const th=(A[q][q]-A[p][p])/(2*A[p][q]);
+      const t=Math.sign(th||1)/(Math.abs(th)+Math.sqrt(th*th+1));
+      const c=1/Math.sqrt(t*t+1),s=t*c;
+      for(let k=0;k<n;k++){const akp=A[k][p],akq=A[k][q];A[k][p]=c*akp-s*akq;A[k][q]=s*akp+c*akq;}
+      for(let k=0;k<n;k++){const apk=A[p][k],aqk=A[q][k];A[p][k]=c*apk-s*aqk;A[q][k]=s*apk+c*aqk;}
+    }
+  }
+  return A.map((r,i)=>r[i]);
+}
+
+function isInt(){return $('cint').checked;}
+
+// Flow along each edge u→v (positive means load moves from u to v)
+function computeFlows(loads){
+  return edges.map((e,k)=>{
+    const f=alphas[k]*(loads[e.u]-loads[e.v]);
+    return isInt()?Math.trunc(f+Math.sign(f)*1e-9):f;
+  });
+}
 
 function diffStep(loads){
-  const alpha=getAlpha();
-  const flows=edges.map(e=>alpha*(loads[e.u]-loads[e.v]));
-  const nl=[...loads];
-  edges.forEach((e,i)=>{nl[e.u]-=flows[i];nl[e.v]+=flows[i];});
-  return{newLoads:nl,flows,alpha};
+  const flows=computeFlows(loads),nl=loads.slice();
+  edges.forEach((e,k)=>{nl[e.u]-=flows[k];nl[e.v]+=flows[k];});
+  return{loads:nl,flows};
 }
 
-function stdDev(arr){
-  const m=arr.reduce((a,b)=>a+b,0)/arr.length;
-  return Math.sqrt(arr.reduce((s,x)=>s+(x-m)**2,0)/arr.length);
+const stdDev=a=>{const m=a.reduce((s,x)=>s+x,0)/a.length;return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/a.length);};
+const maxAbs=a=>a.length?Math.max(...a.map(Math.abs)):0;
+// Settled: with whole tasks, the next step would move nothing; otherwise every
+// load is within EPS of the average
+function settled(loads){
+  if(isInt())return maxAbs(computeFlows(loads))<EPS;
+  const m=loads.reduce((a,b)=>a+b,0)/loads.length;
+  return loads.every(l=>Math.abs(l-m)<EPS);
 }
+const stepsFor1000=()=>Math.ceil(Math.log(1e-3)/Math.log(Math.max(gamma,1e-9)));
 
-const svg=document.getElementById('dsvg');
+// ---------- rendering ----------
+const svg=$('dsvg');
 
 function render(){
   const st=history[curStep],prev=curStep>0?history[curStep-1]:null;
-  const loads=st.loads,flows=st.flows;
-  const minL=Math.min(...loads),maxL=Math.max(...loads);
-  const maxF=flows?Math.max(...flows.map(Math.abs),.001):1;
-  const alpha=getAlpha();
+  const loads=st.loads,flows=st.flows,n=loads.length,deg=degrees();
+  const total=loads.reduce((a,b)=>a+b,0),mean=total/n;
+  const spread=Math.max(...history[0].loads.map(l=>Math.abs(l-mean)),1e-9);
+  const maxF=flows?Math.max(maxAbs(flows),1e-3):1;
+  const cFlow=css('--flow'),cLine=css('--line'),cInk=css('--ink'),cSurf=css('--surface'),cRim=css('--rim'),cMuted=css('--muted'),cStage=css('--stage'),cWarn=css('--warn'),cAcc=css('--accent');
+  const halo=`stroke="${cStage}" stroke-width="5" paint-order="stroke" stroke-linejoin="round"`;
   let h='';
 
-  edges.forEach((e,i)=>{
-    const n1=nodes[e.u],n2=nodes[e.v];
-    const dx=n2.x-n1.x,dy=n2.y-n1.y;
-    const len=Math.sqrt(dx*dx+dy*dy)||1;
-    const ux=dx/len,uy=dy/len;
-    const x1=n1.x+ux*NR,y1=n1.y+uy*NR,x2=n2.x-ux*NR,y2=n2.y-uy*NR;
-    const f=flows?flows[i]:0,af=Math.abs(f);
-    const col=flows?flowCol(f):'#94a3b8';
-    const sw=flows?(1.5+(af/maxF)*3.5):1.5;
-    h+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${col}" stroke-width="${sw.toFixed(1)}" opacity="0.8"/>`;
-
-    if(flows&&af>0.004){
-      const dir=f>0?1:-1;
-      const ax=dir>0?ux:-ux,ay=dir>0?uy:-uy;
-      const edgeLen=Math.sqrt((x2-x1)**2+(y2-y1)**2);
-      const[sx,sy]=f>0?[x1,y1]:[x2,y2];
-      const frac=0.62;
-      const mx=sx+ax*edgeLen*frac,my=sy+ay*edgeLen*frac;
-      const as=6+(af/maxF)*5;
-      const tip=[mx+ax*as*.5,my+ay*as*.5];
-      const bx=-ay*.4,by=ax*.4;
-      const b1=[mx-ax*as*.5+bx*as,my-ay*as*.5+by*as];
-      const b2=[mx-ax*as*.5-bx*as,my-ay*as*.5-by*as];
-      h+=`<polygon points="${tip[0].toFixed(1)},${tip[1].toFixed(1)} ${b1[0].toFixed(1)},${b1[1].toFixed(1)} ${b2[0].toFixed(1)},${b2[1].toFixed(1)}" fill="${col}" opacity="0.95"/>`;
-      const lx=(n1.x+n2.x)/2,ly=(n1.y+n2.y)/2;
-      const ox=-dy/len*14,oy=dx/len*14;
-      h+=`<text x="${(lx+ox).toFixed(1)}" y="${(ly+oy).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-family="monospace" fill="${col}" font-weight="600">${af.toFixed(2)}</text>`;
+  // edges run between node rims, with an arrow and amount when load moves
+  edges.forEach((e,k)=>{
+    const a=nodes[e.u],b=nodes[e.v],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+    // leave room for the name above and the load below each node
+    const cut=NR+5+22*Math.abs(uy);
+    const x1=a.x+ux*cut,y1=a.y+uy*cut,x2=b.x-ux*cut,y2=b.y-uy*cut;
+    const f=flows?flows[k]:0,af=Math.abs(f),moving=flows&&af>=EPS;
+    const w=moving?2+(af/maxF)*5:2;
+    h+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${moving?cFlow:cLine}" stroke-width="${w.toFixed(1)}" stroke-linecap="round"/>`;
+    const mx=(x1+x2)/2,my=(y1+y2)/2,d=20+12*Math.abs(uy),ox=-uy*d,oy=ux*d;
+    if(moving){
+      const ax=f>0?ux:-ux,ay=f>0?uy:-uy,s=9+(af/maxF)*5;
+      const tip=[mx+ax*s*.7,my+ay*s*.7],b1=[mx-ax*s*.5-ay*s*.6,my-ay*s*.5+ax*s*.6],b2=[mx-ax*s*.5+ay*s*.6,my-ay*s*.5-ax*s*.6];
+      h+=`<polygon points="${[tip,b1,b2].map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="${cFlow}"/>`;
+      h+=`<text x="${mx+ox}" y="${my+oy}" text-anchor="middle" dominant-baseline="middle" font-size="15" font-weight="700" fill="${cFlow}" ${halo}>${fmt(af,2)}</text>`;
+    } else if($('salpha').value==='local'){
+      h+=`<text x="${mx+ox}" y="${my+oy}" text-anchor="middle" dominant-baseline="middle" font-size="13" fill="${cMuted}" ${halo}>α ${frac(alphas[k])}</text>`;
     }
   });
 
-  nodes.forEach((n,i)=>{
-    const col=nodeColor(loads[i],minL,maxL);
-    h+=`<g data-nid="${i}" style="cursor:grab">
-<circle cx="${n.x}" cy="${n.y}" r="${NR}" fill="${col}" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
-<text x="${n.x}" y="${n.y-7}" text-anchor="middle" dominant-baseline="middle" font-size="13" font-family="sans-serif" font-weight="500" fill="${NODE_TEXT}">${n.label}</text>
-<text x="${n.x}" y="${n.y+9}" text-anchor="middle" dominant-baseline="middle" font-size="11" font-family="monospace" fill="rgba(255,255,255,.92)">${loads[i].toFixed(1)}</text>
-</g>`;
+  // nodes are round buckets: the fill level is the load, the dashed line is the
+  // average every node is heading for, and the colour shows which side of it the node is on
+  const level=v=>NR-2*NR*Math.max(0,Math.min(1,v/cap));
+  nodes.forEach((nd,i)=>{
+    const l=loads[i],odd=l<-1e-9||l>cap,fy=nd.y+level(l),ay=nd.y+level(mean);
+    h+=`<g data-nid="${i}" style="cursor:pointer">`;
+    if(i===sel)h+=`<circle cx="${nd.x}" cy="${nd.y}" r="${NR+6}" fill="none" stroke="${cAcc}" stroke-width="3"/>`;
+    h+=`<clipPath id="cp${i}"><circle cx="${nd.x}" cy="${nd.y}" r="${NR}"/></clipPath>`;
+    h+=`<circle cx="${nd.x}" cy="${nd.y}" r="${NR}" fill="${cSurf}"/>`;
+    h+=`<rect clip-path="url(#cp${i})" x="${nd.x-NR}" y="${fy}" width="${2*NR}" height="${nd.y+NR-fy}" fill="${nodeColor(l,mean,spread)}"/>`;
+    h+=`<line clip-path="url(#cp${i})" x1="${nd.x-NR}" y1="${ay}" x2="${nd.x+NR}" y2="${ay}" stroke="${cInk}" stroke-width="1.5" stroke-dasharray="4 3" opacity=".7"/>`;
+    h+=`<circle cx="${nd.x}" cy="${nd.y}" r="${NR}" fill="none" stroke="${odd?cWarn:cRim}" stroke-width="${odd?3:2}"/>`;
+    h+=`<text x="${nd.x}" y="${nd.y-NR-12}" text-anchor="middle" font-size="17" font-weight="700" fill="${cInk}" ${halo}>${nd.label}</text>`;
+    h+=`<text x="${nd.x}" y="${nd.y+NR+22}" text-anchor="middle" font-size="16" font-weight="700" fill="${l<-1e-9?cWarn:cInk}" ${halo}>${fmt(l,2)}</text>`;
+    h+=`</g>`;
   });
-
   svg.innerHTML=h;
 
-  document.getElementById('cstep').textContent=curStep===0?'Initial':`Step ${curStep}`;
-  document.getElementById('calpha').textContent=`α = 1/${Math.max(...getDeg())+1} ≈ ${alpha.toFixed(3)}`;
-  document.getElementById('ctotal').textContent=`total: ${loads.reduce((a,b)=>a+b,0).toFixed(1)} · avg: ${(loads.reduce((a,b)=>a+b,0)/loads.length).toFixed(1)}`;
+  // status line
+  const mode=$('salpha').value,D=Math.max(...deg);
+  $('sstep').textContent=curStep;
+  $('salph').textContent=mode==='local'?'per edge':mode==='global'?`1/${D+1}`:fmt(alphas[0],2);
+  $('sgam').innerHTML=`γ <b>${fmt(gamma,3)}</b>`;
+  $('sgam').classList.toggle('bad',gamma>=1-1e-9);
+  $('savg').textContent=fmt(mean,3);
 
-  const descEl=document.getElementById('sdesc');
+  // narration
+  const sd=stdDev(loads),done=settled(loads),neg=loads.some(l=>l<-1e-9);
+  let msg,bad=false;
   if(curStep===0){
-    const hi=nodes[loads.indexOf(maxL)].label,lo=nodes[loads.indexOf(minL)].label;
-    descEl.textContent=`Initial state. Node ${hi} has the highest load (${maxL.toFixed(1)}), node ${lo} has the lowest (${minL.toFixed(1)}). Total load is conserved throughout all steps.`;
-    document.getElementById('fsec').style.display='none';
+    const hi=loads.indexOf(Math.max(...loads)),lo=loads.indexOf(Math.min(...loads));
+    msg=`${nodes[hi].label} holds the most load (${fmt(loads[hi])}) and ${nodes[lo].label} the least (${fmt(loads[lo])}). Every node should end with the average, ${fmt(mean,3)}.`;
+    if(gamma>=1-1e-9){msg+=' With this α the loads will never settle.';bad=true;}
   } else {
-    const maxFv=flows?Math.max(...flows.map(Math.abs)):0;
-    const conv=maxFv<0.004;
-    if(conv){
-      descEl.textContent=`Converged. All flows are below 0.004. Loads are approximately balanced — further iterations produce negligible change.`;
-    } else {
-      const mi=flows.findIndex(f=>Math.abs(f)===maxFv);
-      const ee=edges[mi];
-      const dd=flows[mi]>0?`${nodes[ee.u].label}→${nodes[ee.v].label}`:`${nodes[ee.v].label}→${nodes[ee.u].label}`;
-      descEl.textContent=`Step ${curStep}. Each node sends load proportional to imbalance (α=${alpha.toFixed(3)}). Largest flow: ${dd} = ${maxFv.toFixed(3)}. Total load is unchanged.`;
-    }
-    document.getElementById('fsec').style.display='';
+    const k=flows.map(Math.abs).indexOf(maxAbs(flows)),e=edges[k];
+    const [s,t]=flows[k]>0?[e.u,e.v]:[e.v,e.u];
+    msg=`Step ${curStep}: every flow was worked out from the old loads, then all were applied at once. The biggest moved ${fmt(maxAbs(flows),3)} from ${nodes[s].label} to ${nodes[t].label}. The total is still ${fmt(total,2)}.`;
+    if(gamma>=1-1e-9&&sd>EPS){msg=`Step ${curStep}: α is too large for this graph, so load sloshes back and forth and never settles.`;bad=true;}
   }
+  if(curStep>0&&done){
+    if(!isInt()||sd<EPS)msg=`Balanced after ${curStep} step${curStep>1?'s':''}: every node holds ${fmt(mean,3)}.`;
+    else{msg=`Stuck after ${curStep} steps. Every flow rounds down to 0 whole tasks, so nothing moves although the loads are uneven. This is the granularity problem.`;bad=true;}
+  }
+  if(neg){msg+=' A load has gone negative: more was sent out than the node had.';bad=true;}
+  $('narr').textContent=msg;$('narr').classList.toggle('bad',bad);
 
-  document.getElementById('ltbody').innerHTML=nodes.map((n,i)=>{
-    const l=loads[i],col=nodeColor(l,minL,maxL);
-    const d=prev?l-prev.loads[i]:0;
-    const dc=d>0.004?'du':d<-0.004?'dd':'dz';
-    const ds=prev?(d>0.004?`+${d.toFixed(2)}`:d<-0.004?d.toFixed(2):'—'):'—';
-    return`<tr><td><span class="sw" style="background:${col}"></span>${n.label}</td><td style="text-align:right">${l.toFixed(2)}</td><td style="text-align:right" class="${dc}">${ds}</td></tr>`;
+  renderCalc(loads);
+  renderTables(loads,prev,flows,deg,mean,spread);
+  renderConv();
+
+  const stop=curStep>=MAXSTEP||done;
+  $('bprev').disabled=curStep===0;
+  $('bnext').disabled=stop;
+  $('bauto').disabled=stop&&!autoTmr;
+  $('bauto').textContent=autoTmr?'Pause':'Play';
+}
+
+// Worked update for the selected node, for the step that Next will perform
+function renderCalc(loads){
+  const i=sel,N=nodes[i].label;
+  $('nhead').textContent=`Node ${N}, step ${curStep} to ${curStep+1}`;
+  const terms=[];let sum=0;
+  edges.forEach((e,k)=>{
+    if(e.u!==i&&e.v!==i)return;
+    const j=e.u===i?e.v:e.u;
+    let t=alphas[k]*(loads[j]-loads[i]);
+    if(isInt())t=Math.trunc(t+Math.sign(t)*1e-9);
+    terms.push({j,a:frac(alphas[k]),t});sum+=t;
+  });
+  const L=v=>fmt(v,3);
+  let s=`l<sub>${N}</sub>' = l<sub>${N}</sub> + Σ α(l<sub>j</sub> − l<sub>${N}</sub>)<br>`;
+  s+=terms.map((t,q)=>`<span class="q">${q?'&nbsp;&nbsp;+':'= '+L(loads[i])+' +'}</span> ${t.a}·(${L(loads[t.j])} − ${L(loads[i])})`).join('<br>')+'<br>';
+  s+=`<span class="q">=</span> ${L(loads[i])}`+terms.map(t=>` ${t.t<0?'−':'+'} ${L(Math.abs(t.t))}`).join('')+(isInt()?' <span class="q">(whole tasks)</span>':'')+'<br>';
+  s+=`<span class="q">=</span> <b>${L(loads[i]+sum)}</b>`;
+  $('calc').innerHTML=s;
+}
+
+function renderTables(loads,prev,flows,deg,mean,spread){
+  $('ltbody').innerHTML=nodes.map((nd,i)=>{
+    const l=loads[i],dl=prev?l-prev.loads[i]:0;
+    const cls=dl>=EPS?'up':dl<=-EPS?'down':'none';
+    const ds=prev&&Math.abs(dl)>=EPS?(dl>0?'+':'')+fmt(dl,3):'—';
+    const cell=curStep===0?`<input type="number" step="1" min="0" value="${l}" data-li="${i}" aria-label="Starting load of ${nd.label}">`:`<span class="${l<-1e-9?'neg':''}">${fmt(l,3)}</span>`;
+    return`<tr class="${i===sel?'sel':''}"><td><span class="dot" style="background:${nodeColor(l,mean,spread)}"></span>${nd.label}</td><td class="r">${deg[i]}</td><td class="r">${cell}</td><td class="r ${cls}">${ds}</td></tr>`;
   }).join('');
-
+  $('lnote').hidden=curStep!==0;
+  $('fsec').hidden=!flows;
   if(flows){
-    document.getElementById('ftbody').innerHTML=edges.map((e,i)=>{
-      const f=flows[i],af=Math.abs(f);
-      const dir=f>0.004?`${nodes[e.u].label}→${nodes[e.v].label}`:f<-0.004?`${nodes[e.v].label}→${nodes[e.u].label}`:'—';
-      const fc=f>0.004?FLOW_OUT:f<-0.004?FLOW_IN:'var(--color-text-secondary)';
-      return`<tr><td>${nodes[e.u].label}–${nodes[e.v].label}</td><td style="color:${fc}">${dir}</td><td style="text-align:right;color:${fc}">${af>0.004?af.toFixed(3):'0'}</td></tr>`;
+    $('ftbody').innerHTML=edges.map((e,k)=>{
+      const f=flows[k],mv=Math.abs(f)>=EPS;
+      const dir=mv?(f>0?`${nodes[e.u].label} → ${nodes[e.v].label}`:`${nodes[e.v].label} → ${nodes[e.u].label}`):'—';
+      return`<tr><td>${nodes[e.u].label}–${nodes[e.v].label}</td><td class="r none">${frac(alphas[k])}</td><td>${dir}</td><td class="r">${mv?fmt(Math.abs(f),3):'0'}</td></tr>`;
     }).join('');
   }
-
-  const sd=stdDev(loads),sd0=stdDev(history[0].loads);
-  const bal=sd0>0?Math.max(0,1-sd/sd0):1;
-  document.getElementById('cfill').style.width=`${(bal*100).toFixed(1)}%`;
-  document.getElementById('cval').textContent=`σ = ${sd.toFixed(3)}`;
-
-  const maxFcur=st.flows?Math.max(...st.flows.map(Math.abs)):Infinity;
-  const done=curStep>=30||(st.flows&&maxFcur<0.004);
-  document.getElementById('bprev').disabled=curStep===0;
-  document.getElementById('bnext').disabled=done;
-  document.getElementById('bauto').disabled=done;
 }
 
+function renderConv(){
+  const W=270,H=150,P=6,sd0=stdDev(history[0].loads),sd=stdDev(history[curStep].loads);
+  const diverges=gamma>=1-1e-9;
+  $('csd').textContent=fmt(sd,3);
+  $('cgam').textContent=fmt(gamma,3);
+  $('cgam').style.color=diverges?css('--warn'):'';
+  $('cnote').textContent=diverges
+    ?`γ is ${fmt(gamma,3)}, so the imbalance never dies away. Pick a smaller α.`
+    :`Each step leaves about ${Math.round(gamma*100)}% of the imbalance, so σ drops 1000-fold in about ${stepsFor1000()} steps. γ comes from the eigenvalues of the update matrix W = I − αL, leaving out the eigenvalue 1 of the balanced state.`;
+  const sp=$('spark');
+  if(sd0<EPS){sp.innerHTML='';return;}
+  const floor=1e-3*sd0;
+  const pts=history.slice(0,curStep+1).map(s=>Math.max(stdDev(s.loads),floor));
+  const steps=Math.max(10,curStep,Math.min(MAXSTEP,diverges?20:stepsFor1000()));
+  const top=Math.log10(Math.max(sd0,...pts)*1.5),bot=Math.log10(floor);
+  const X=k=>P+(W-2*P)*k/steps,Y=v=>P+(H-2*P)*(top-Math.log10(Math.max(v,floor)))/(top-bot);
+  const cW=css('--warm'),cC=css('--cool'),cL=css('--line');
+  let h=`<line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="${cL}"/><line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="${cL}"/>`;
+  h+=`<polyline points="${[...Array(steps+1).keys()].map(k=>`${X(k).toFixed(1)},${Y(sd0*gamma**k).toFixed(1)}`).join(' ')}" fill="none" stroke="${cC}" stroke-width="1.6" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>`;
+  h+=`<polyline points="${pts.map((v,k)=>`${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${cW}" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`;
+  h+=`<circle cx="${X(curStep).toFixed(1)}" cy="${Y(pts[curStep]).toFixed(1)}" r="3.5" fill="${cW}"/>`;
+  sp.innerHTML=h;
+}
+
+// ---------- controls ----------
 function goNext(){
-  if(curStep>=30)return;
-  if(curStep>=history.length-1){
-    const{newLoads,flows,alpha}=diffStep(history[history.length-1].loads);
-    history.push({loads:newLoads,flows,alpha});
-  }
-  curStep++;render();
+  const st=history[curStep];
+  if(curStep>=MAXSTEP||settled(st.loads))return false;
+  if(curStep>=history.length-1)history.push(diffStep(st.loads));
+  curStep++;render();return true;
 }
 function goPrev(){if(curStep>0){curStep--;render();}}
-function doReset(){curStep=0;history=[history[0]];stopAuto();render();}
 function startAuto(){
   if(autoTmr)return;
-  document.getElementById('bauto').textContent='■ Stop';
-  autoTmr=setInterval(()=>{
-    const s=history[curStep];
-    const mf=s.flows?Math.max(...s.flows.map(Math.abs)):Infinity;
-    if(curStep>=30||mf<0.004){stopAuto();return;}
-    goNext();
-  },750);
+  autoTmr=setInterval(()=>{if(!goNext()){stopAuto();render();}},650);
+  render();
 }
-function stopAuto(){
-  if(autoTmr){clearInterval(autoTmr);autoTmr=null;}
-  document.getElementById('bauto').textContent='▷ Auto';
-}
+function stopAuto(){if(autoTmr){clearInterval(autoTmr);autoTmr=null;}}
 
+function svgPoint(e){
+  const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
 svg.addEventListener('pointerdown',e=>{
   const g=e.target.closest('[data-nid]');
   if(!g)return;
-  dragId=parseInt(g.dataset.nid);
-  const r=svg.getBoundingClientRect();
-  dragOx=(e.clientX-r.left)*(VW/r.width)-nodes[dragId].x;
-  dragOy=(e.clientY-r.top)*(VH/r.height)-nodes[dragId].y;
+  const id=+g.dataset.nid,p=svgPoint(e);
+  drag={id,ox:p.x-nodes[id].x,oy:p.y-nodes[id].y,sx:e.clientX,sy:e.clientY,moved:false};
+  svg.setPointerCapture(e.pointerId);
   e.preventDefault();
 });
-document.addEventListener('pointermove',e=>{
-  if(dragId===null)return;
-  const r=svg.getBoundingClientRect();
-  nodes[dragId].x=Math.max(NR+4,Math.min(VW-NR-4,(e.clientX-r.left)*(VW/r.width)-dragOx));
-  nodes[dragId].y=Math.max(NR+4,Math.min(VH-NR-4,(e.clientY-r.top)*(VH/r.height)-dragOy));
+svg.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>4)drag.moved=true;
+  if(!drag.moved)return;
+  const p=svgPoint(e);
+  nodes[drag.id].x=Math.max(view.x+NR+4,Math.min(view.x+view.w-NR-4,p.x-drag.ox));
+  nodes[drag.id].y=Math.max(view.y+NR+30,Math.min(view.y+view.h-NR-30,p.y-drag.oy));
   render();
 });
-document.addEventListener('pointerup',()=>{dragId=null;});
+svg.addEventListener('pointerup',()=>{
+  if(drag&&!drag.moved){sel=drag.id;showTab('node');render();}
+  drag=null;
+});
 
-document.getElementById('bprev').onclick=()=>{stopAuto();goPrev();};
-document.getElementById('bnext').onclick=()=>{stopAuto();goNext();};
-document.getElementById('bauto').onclick=()=>{if(autoTmr)stopAuto();else startAuto();};
-document.getElementById('breset').onclick=()=>doReset();
-document.getElementById('brand').onclick=()=>{stopAuto();randomize();render();};
+const TABS=['node','loads','conv'];
+function showTab(name){
+  TABS.forEach(t=>{$('t-'+t).setAttribute('aria-selected',t===name);$('p-'+t).hidden=t!==name;});
+}
+TABS.forEach(t=>$('t-'+t).onclick=()=>showTab(t));
 
-setDefault();
-render();
+$('ltbody').addEventListener('change',e=>{
+  const i=e.target.dataset.li;
+  if(i===undefined)return;
+  const v=parseFloat(e.target.value);
+  history[0].loads[+i]=Number.isFinite(v)?Math.max(0,Math.round(v)):0;
+  refreshAlpha();render();
+});
+
+function setup(key){stopAuto();loadGraph(key);render();}
+$('sgraph').onchange=e=>setup(e.target.value);
+$('brand').onclick=()=>{$('sgraph').value='random';setup('random');};
+$('salpha').onchange=e=>{$('lcustom').hidden=e.target.value!=='custom';stopAuto();refreshAlpha();render();};
+$('ralpha').oninput=e=>{$('valpha').textContent=(+e.target.value).toFixed(2);stopAuto();refreshAlpha();render();};
+$('cint').onchange=()=>{stopAuto();history=[history[0]];curStep=0;render();};
+$('bprev').onclick=()=>{stopAuto();curStep?goPrev():render();};
+$('bnext').onclick=()=>{stopAuto();goNext();};
+$('bauto').onclick=()=>{if(autoTmr){stopAuto();render();}else startAuto();};
+$('breset').onclick=()=>{stopAuto();curStep=0;history=[history[0]];render();};
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select'))return;
+  if(e.key==='ArrowRight'){stopAuto();goNext();e.preventDefault();}
+  else if(e.key==='ArrowLeft'){stopAuto();curStep?goPrev():render();e.preventDefault();}
+  else if(e.key===' '&&!e.target.matches('button')){if(autoTmr){stopAuto();render();}else startAuto();e.preventDefault();}
+});
+if(window.matchMedia)matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+setup('lecture');
 </script>
 </body>
 </html>
