@@ -116,4 +116,5 @@ nav:
     - Kernighan–Lin Algorithm: tutorials/kl-algorithm.md
     - Diffusion Load Balancing: tutorials/diffusion-algorithm.md
     - PDA vs QPA: tutorials/pda-qpa.md
+    - Preemptive vs Non-preemptive: tutorials/preemptive-scheduling.md
   - Practicals: https://iangray001.github.io/embs/docs/practicals/

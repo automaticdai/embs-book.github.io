@@ -45,6 +45,9 @@ The **scheduler** decides which ready task runs next. A **context switch** saves
 
 Preemption and activation are separate choices. A time-triggered cyclic executive uses a schedule established offline. An event-triggered application activates work in response to events and may use either preemptive tasks or handlers that run to completion. See [embedded software design](embedded-software.md#choosing-an-execution-structure) for the trade-offs.
 
+!!! tip "Interactive tutorial"
+    Run one task set under both policies in the [**preemptive vs non-preemptive scheduling tutorial**](../tutorials/preemptive-scheduling.md). Step through time to see a high-priority task preempt a running one, or wait behind it when preemption is disabled.
+
 ---
 
 ## Kernel Services
@@ -64,5 +67,6 @@ Preemption and activation are separate choices. A time-triggered cyclic executiv
 
 ## Next Steps
 
+- Compare [preemptive and non-preemptive priority scheduling](../tutorials/preemptive-scheduling.md) interactively
 - Study [FreeRTOS task states, queues, mutexes and memory](freertos.md) as a concrete kernel example
 - Learn how tasks are scheduled to meet their deadlines in [Real-Time Scheduling](../real-time-scheduling/introduction.md)
