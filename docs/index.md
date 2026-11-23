@@ -74,6 +74,7 @@ A companion to the EMBS module. Explore the principles of embedded systems, the 
 - [Kernighan–Lin algorithm](tutorials/kl-algorithm.md) — Move nodes and step through graph partitioning
 - [Diffusion load balancing](tutorials/diffusion-algorithm.md) — Watch load flow between neighbouring nodes until it evens out
 - [PDA vs QPA](tutorials/pda-qpa.md) — Compare two exact EDF schedulability tests on random task sets
+- [Preemptive vs non-preemptive scheduling](tutorials/preemptive-scheduling.md) — Run one task set under both schedulers and see where blocking appears
 - [FPS starvation](tutorials/fps-starvation.md) — Watch higher-priority work keep a low-priority task off the processor
 - [EDF domino effect](tutorials/edf-domino.md) — See one late job push a chain of others past their deadlines under overload
 

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Preemptive vs Non-preemptive Scheduling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one shared task set, two timing diagrams stacked on a common time axis with one cursor, then the editor and results side by side. */
+:root{
+  color-scheme:light; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#F3F5F8; --surface:#FFFFFF; --ink:#1C2430; --muted:#5A6676; --line:#D5DBE3; --soft:#E9EDF2;
+  --stage:#E4E9F0; --accent:#1E7B3A; --accent-ink:#FFFFFF; --block:#C62828; --hit:#E6F2E9; --cursor:#1C243018;
+  --t1:#2F6FB0; --t2:#C8691C; --t3:#8A4FB5; --t4:#B03A6B; --t5:#2E7F8C; --t6:#857512;
+  --font:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+    --stage:#10151B; --accent:#6CC487; --accent-ink:#151A21; --block:#FF6B6B; --hit:#203A2A; --cursor:#E6EBF11C;
+    --t1:#78AEE0; --t2:#E8A060; --t3:#B990E0; --t4:#E589B0; --t5:#74C3D0; --t6:#D2C25A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+  --stage:#10151B; --accent:#6CC487; --accent-ink:#151A21; --block:#FF6B6B; --hit:#203A2A; --cursor:#E6EBF11C;
+  --t1:#78AEE0; --t2:#E8A060; --t3:#B990E0; --t4:#E589B0; --t5:#74C3D0; --t6:#D2C25A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:18px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:clamp(26px,3.4vw,38px);line-height:1.15;margin:0 0 6px;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:20px;margin:0 0 4px}
+h3{font-size:17px;margin:0 0 6px}
+p{margin:0}
+.intro{margin:0 0 18px;color:var(--muted);max-width:74ch}
+.lab{font-size:14px;color:var(--muted);font-weight:700;margin:0 0 6px}
+.small{font-size:15px;color:var(--muted)}
+.stage{background:var(--stage);border-radius:14px;padding:16px 16px 6px;display:flex;flex-direction:column;gap:14px}
+.chart-head{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
+.chart-head p{font-size:15px;color:var(--muted)}
+.scroll{overflow-x:auto}
+svg{display:block}
+svg text{font-family:var(--font);fill:var(--ink)}
+svg .mut{fill:var(--muted)}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .base{stroke:var(--muted);stroke-width:1.5}
+svg .cur{fill:var(--cursor)}
+svg .curline{stroke:var(--ink);stroke-width:2}
+svg .arrow{stroke:var(--ink);fill:var(--ink);stroke-width:2}
+svg .miss{stroke:var(--block);fill:var(--block)}
+svg .hatchbg{fill:var(--block);opacity:.12}
+svg .hatchline{stroke:var(--block);stroke-width:2}
+.legend{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14px;color:var(--muted);padding:0 0 10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:22px;height:12px;border-radius:2px}
+.legend .run{background:var(--t1)} .legend .wait{background:var(--t1);opacity:.28}
+.legend .blk{background:repeating-linear-gradient(135deg,var(--block) 0 2px,transparent 2px 6px);outline:1px solid var(--block)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 12px}
+.controls input[type=range]{flex:1 1 220px;min-width:0;accent-color:var(--accent)}
+.tnow{font-weight:700;min-width:5.5ch}
+.check{display:inline-flex;align-items:center;gap:7px;font-size:16px;font-weight:700;cursor:pointer}
+.hideP #boxP,.hideP #nboxP,.hideP .cP,.hideN #boxN,.hideN #nboxN,.hideN .cN{display:none}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+button{font:inherit;font-size:16px;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer;border:2px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+button.secondary{background:transparent;color:var(--accent)}
+button.chip{padding:5px 11px;font-size:15px}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.narrs{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.narr{border-left:4px solid var(--accent);background:var(--surface);padding:12px 14px;border-radius:0 8px 8px 0;min-height:5.4em;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;margin-top:22px;align-items:start}
+@media (max-width:860px){.grid,.narrs{grid-template-columns:1fr}}
+.panel{background:var(--surface);border-radius:12px;padding:16px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+table{border-collapse:collapse;width:100%;font-size:16px}
+th{font-size:14px;color:var(--muted);text-align:left;font-weight:700;padding:4px 6px;vertical-align:bottom}
+td{padding:5px 6px;border-top:1px solid var(--line)}
+td.num,th.num{text-align:right}
+td:first-child{white-space:nowrap}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+input[type=number]{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:7px;padding:4px 6px;width:4.6em}
+.x{border:none;background:none;color:var(--muted);padding:2px 8px;font-size:18px}
+.seg{display:inline-flex;border:2px solid var(--accent);border-radius:9px;overflow:hidden}
+.seg label{cursor:pointer;font-size:15px;font-weight:700;color:var(--accent)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:6px 12px}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink)}
+.seg input:focus-visible+span{outline:3px solid var(--accent);outline-offset:-3px}
+.bad{color:var(--block);font-weight:700}
+.good{color:var(--accent);font-weight:700}
+.sum{margin-top:12px;font-size:16px}
+.notes{margin-top:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px 28px}
+.notes p{font-size:16px;color:var(--muted)}
+.notes b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Preemptive vs non-preemptive priority scheduling</h1>
+  <p class="intro">Both schedulers always pick the highest-priority task that is ready. They differ in one thing: <b>when</b> they are allowed to pick. A preemptive scheduler decides again every time a task is released. A non-preemptive scheduler decides only when the processor becomes free. The same task set runs under both below; step through time and watch where they part.</p>
+
+  <div class="stage" id="stage">
+    <div id="boxN">
+      <div class="chart-head"><h2>Non-preemptive</h2><p>Once a task starts, it runs to completion. Everyone else waits.</p></div>
+      <div class="scroll" id="chartN"></div>
+    </div>
+    <div id="boxP">
+      <div class="chart-head"><h2>Preemptive</h2><p>A newly released task with higher priority takes the processor at once.</p></div>
+      <div class="scroll" id="chartP"></div>
+    </div>
+    <p class="small" id="nonevis" hidden>Both schedules are hidden. Tick one below to show it.</p>
+    <div class="legend" aria-hidden="true">
+      <span><i class="run"></i>running</span>
+      <span><i class="wait"></i>ready, waiting</span>
+      <span><i class="blk"></i>blocked by a lower-priority task</span>
+      <span>↑ release</span>
+      <span>↓ deadline</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="prev" class="secondary" aria-label="Step back one time unit">◀ Step</button>
+    <button id="next" aria-label="Step forward one time unit">Step ▶</button>
+    <button id="play" class="secondary">Play</button>
+    <span class="tnow" id="tnow">t = 0</span>
+    <input type="range" id="time" min="0" max="10" value="0" step="1" aria-label="Time">
+    <label class="check"><input type="checkbox" id="showall"> Show the schedule after t</label>
+    <label class="check"><input type="checkbox" id="visN" checked> Non-preemptive</label>
+    <label class="check"><input type="checkbox" id="visP" checked> Preemptive</label>
+  </div>
+
+  <div class="narrs" aria-live="polite">
+    <div class="narr" id="nboxN"><p class="lab">Non-preemptive</p><p id="narrN"></p></div>
+    <div class="narr" id="nboxP"><p class="lab">Preemptive</p><p id="narrP"></p></div>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h3>Task set</h3>
+      <div class="row" id="presets">
+        <span class="lab" style="margin:0">Examples</span>
+        <button class="secondary chip" data-preset="urgent">Urgent arrival</button>
+        <button class="secondary chip" data-preset="late">One tick too late</button>
+        <button class="secondary chip" data-preset="same">All released together</button>
+        <button class="secondary chip" data-preset="stream">Low priority pushed back</button>
+      </div>
+      <div class="scroll">
+        <table id="editor">
+          <thead><tr><th>Task</th><th>Release</th><th>Execution time</th><th>Priority</th><th>Deadline<br>(after release)</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="row" style="margin:12px 0 0">
+        <button class="secondary chip" id="add">Add task</button>
+        <div class="seg" role="radiogroup" aria-label="Priority convention">
+          <label><input type="radio" name="conv" id="conv-low" value="low" checked><span>1 = highest priority</span></label>
+          <label><input type="radio" name="conv" id="conv-high" value="high"><span>Larger = higher</span></label>
+        </div>
+      </div>
+      <p class="small" style="margin-top:10px">Time is in whole units. Leave a deadline empty for none. Equal priorities are served in release order and do not preempt each other.</p>
+    </section>
+
+    <section class="panel">
+      <h3>Response times</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Task</th><th class="num">Deadline</th><th class="num cN">Non-preemptive</th><th class="num cP">Preemptive</th></tr></thead>
+          <tbody id="results"></tbody>
+        </table>
+      </div>
+      <p class="small" style="margin-top:8px">Response time = finish time − release time.</p>
+      <p class="sum" id="summary"></p>
+    </section>
+  </div>
+
+  <div class="notes">
+    <p><b>What preemption buys.</b> A high-priority task never waits for a lower-priority one, so its response time depends only on itself and the tasks above it.</p>
+    <p><b>What it costs.</b> Each preemption is an extra context switch, and a task can be interrupted halfway through updating shared data, so shared resources need protecting.</p>
+    <p><b>Blocking without preemption.</b> A task can be held up by at most one lower-priority task, for as long as that task still has to run. One long low-priority task is enough to break a tight deadline.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const PRESETS={
+  urgent:[{r:3,c:2,p:1,d:3},{r:2,c:3,p:2,d:8},{r:0,c:6,p:3,d:14}],
+  late:[{r:0,c:8,p:3,d:null},{r:1,c:1,p:1,d:2}],
+  same:[{r:0,c:4,p:2,d:null},{r:0,c:2,p:1,d:null},{r:0,c:3,p:3,d:null}],
+  stream:[{r:0,c:4,p:3,d:12},{r:1,c:3,p:1,d:5},{r:4,c:3,p:1,d:5},{r:5,c:3,p:2,d:9}]
+};
+let tasks=PRESETS.urgent.map(t=>({...t})), lowIsHigh=true, cur=0, simP, simN, end=0, timer=null, showAll=false;
+const name=i=>'T'+(i+1);
+const col=i=>`var(--t${i%6+1})`;
+const higher=(a,b)=>lowIsHigh?a.p<b.p:a.p>b.p;
+
+function simulate(preemptive){
+  const n=tasks.length,rem=tasks.map(t=>t.c),finish=Array(n).fill(null),slots=[],wait=[],remAt=[];
+  let t=0,run=-1,preempts=0;
+  while(rem.some(x=>x>0)&&t<600){
+    const ready=[];for(let i=0;i<n;i++)if(tasks[i].r<=t&&rem[i]>0)ready.push(i);
+    remAt.push(rem.slice());
+    if(!ready.length){slots.push(-1);wait.push([]);run=-1;t++;continue}
+    let best=ready[0];
+    for(const i of ready){const a=tasks[i],b=tasks[best];if(higher(a,b)||(a.p===b.p&&a.r<b.r))best=i}
+    const live=run>=0&&rem[run]>0;
+    let pick=best;
+    if(live&&(!preemptive||!higher(tasks[best],tasks[run])))pick=run;
+    if(live&&pick!==run)preempts++;
+    slots.push(pick);
+    wait.push(ready.filter(i=>i!==pick).map(i=>({i,blocked:higher(tasks[i],tasks[pick])})));
+    rem[pick]--;if(rem[pick]===0)finish[pick]=t+1;
+    run=pick;t++;
+  }
+  return{slots,wait,remAt,finish,end:t,preempts};
+}
+
+function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+function describe(sim,t,preemptive){
+  const out=[];
+  const rel=tasks.map((x,i)=>i).filter(i=>tasks[i].r===t);
+  const fin=tasks.map((x,i)=>i).filter(i=>sim.finish[i]===t);
+  if(fin.length)out.push(`<b>${list(fin.map(name))}</b> ${fin.length>1?'finish':'finishes'}.`);
+  if(rel.length)out.push(`<b>${list(rel.map(name))}</b> ${rel.length>1?'are':'is'} released.`);
+  if(t>=sim.end){out.push(`All tasks are done at t = ${sim.end}.`);return out.join(' ')}
+  const run=sim.slots[t],prev=t>0?sim.slots[t-1]:-1,prevLive=prev>=0&&sim.finish[prev]!==t;
+  const w=sim.wait[t],blocked=w.filter(x=>x.blocked).map(x=>name(x.i));
+  if(run<0){out.push('Nothing is ready, so the processor is idle.');return out.join(' ')}
+  const left=sim.remAt[t][run];
+  if(prevLive&&run===prev){
+    if(blocked.length)out.push(`${name(run)} is still running and cannot be interrupted, so ${list(blocked)} ${blocked.length>1?'wait':'waits'} behind a lower-priority task <span class="bad">(blocked)</span>. ${name(run)} has ${left} left.`);
+    else if(rel.length)out.push(`${name(run)} keeps running: the new arrival does not outrank it.`);
+    else out.push(`${name(run)} keeps running, ${left} left.`);
+  }else if(prevLive){
+    out.push(`${name(run)} outranks ${name(prev)}, so <b>${name(prev)} is preempted</b> with ${sim.remAt[t][prev]} left and ${name(run)} starts at once.`);
+  }else{
+    const verb=left===tasks[run].c?'starts':`resumes with ${left} left`;
+    out.push(w.length?`The processor is free. ${name(run)} has the highest priority of the ready tasks, so it ${verb}.`:`${name(run)} is the only ready task, so it ${verb}.`);
+  }
+  const plain=w.filter(x=>!x.blocked).map(x=>name(x.i));
+  if(plain.length)out.push(`Waiting: ${list(plain)}.`);
+  return out.join(' ');
+}
+
+function runs(arr,key){const o=[];let s=0;for(let t=1;t<=arr.length;t++){if(t===arr.length||key(arr[t])!==key(arr[s])){o.push([s,t,arr[s]]);s=t}}return o}
+
+function draw(el,sim,id){
+  const n=tasks.length,W=Math.max(620,Math.floor(el.clientWidth)||620),L=78,R=18,T=end+1,u=(W-L-R)/T;
+  const top=22,rh=40,H=top+n*rh+30,x=t=>L+t*u;
+  const step=T<=26?1:T<=60?2:5;
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${id==='P'?'Preemptive':'Non-preemptive'} schedule timing diagram">`;
+  s+=`<defs><pattern id="h${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="hatchline" x1="0" y1="0" x2="0" y2="7"/></pattern></defs>`;
+  if(cur<end)s+=`<rect class="cur" x="${x(cur)}" y="${top-14}" width="${u}" height="${n*rh+14}"/>`;
+  for(let t=0;t<=T;t+=step){
+    s+=`<line class="grid" x1="${x(t)}" y1="${top-6}" x2="${x(t)}" y2="${top+n*rh}"/><text class="mut" x="${x(t)}" y="${H-10}" font-size="14" text-anchor="middle">${t}</text>`;
+  }
+  for(let i=0;i<n;i++){
+    const y=top+i*rh,by=y+rh-6,bh=20,tk=tasks[i];
+    s+=`<text x="8" y="${by-4}" font-size="16" font-weight="700">${name(i)}</text><text class="mut" x="34" y="${by-4}" font-size="14">prio ${tk.p}</text>`;
+    s+=`<line class="base" x1="${L}" y1="${by}" x2="${W-R}" y2="${by}"/>`;
+    // waiting bands
+    const lim=showAll?sim.end:Math.min(cur,sim.end);
+    const ws=sim.wait.slice(0,lim).map(w=>{const f=w.find(q=>q.i===i);return f?(f.blocked?2:1):0});
+    for(const [a,b,k] of runs(ws,v=>v)){
+      if(k===1)s+=`<rect x="${x(a)}" y="${by-bh}" width="${(b-a)*u}" height="${bh}" fill="${col(i)}" opacity=".26"/>`;
+      if(k===2)s+=`<rect class="hatchbg" x="${x(a)}" y="${by-bh}" width="${(b-a)*u}" height="${bh}"/><rect x="${x(a)}" y="${by-bh}" width="${(b-a)*u}" height="${bh}" fill="url(#h${id})"/>`;
+    }
+    for(const [a,b,k] of runs(sim.slots.slice(0,lim),v=>v===i)){
+      if(k===i)s+=`<rect x="${x(a)+.5}" y="${by-bh}" width="${(b-a)*u-1}" height="${bh}" rx="2" fill="${col(i)}"/>`;
+    }
+    // release arrow (up)
+    const rx=x(tk.r);
+    s+=`<g class="arrow"><line x1="${rx}" y1="${by}" x2="${rx}" y2="${by-30}"/><path d="M${rx-4.5} ${by-25}L${rx} ${by-33}L${rx+4.5} ${by-25}Z"/></g>`;
+    if(tk.d!=null&&tk.r+tk.d<=T){
+      const dx=x(tk.r+tk.d),miss=sim.finish[i]>tk.r+tk.d&&(showAll||cur>tk.r+tk.d);
+      s+=`<g class="arrow${miss?' miss':''}"><line x1="${dx}" y1="${by-33}" x2="${dx}" y2="${by-3}"/><path d="M${dx-4.5} ${by-8}L${dx} ${by}L${dx+4.5} ${by-8}Z"/></g>`;
+    }
+  }
+  s+=`<line class="curline" x1="${x(cur)}" y1="${top-14}" x2="${x(cur)}" y2="${top+n*rh}"/>`;
+  s+=`<text class="mut" x="8" y="${H-10}" font-size="14">time</text></svg>`;
+  el.innerHTML=s;
+}
+
+function cell(sim,i){
+  const tk=tasks[i],f=sim.finish[i];if(f==null)return '–';
+  if(!showAll&&f>cur)return '<span class="small">not finished</span>';
+  const r=f-tk.r;
+  if(tk.d==null)return String(r);
+  return r>tk.d?`<span class="bad">${r} · missed</span>`:`<span class="good">${r} · met</span>`;
+}
+function renderResults(){
+  $('results').innerHTML=tasks.map((tk,i)=>`<tr><td><span class="sw" style="background:${col(i)}"></span>${name(i)}</td><td class="num">${tk.d==null?'–':tk.d}</td><td class="num cN">${cell(simN,i)}</td><td class="num cP">${cell(simP,i)}</td></tr>`).join('');
+  const miss=s=>tasks.filter((tk,i)=>tk.d!=null&&s.finish[i]-tk.r>tk.d).length;
+  const same=simP.slots.join()===simN.slots.join();
+  const blk=new Set();simN.wait.forEach(w=>w.forEach(q=>{if(q.blocked)blk.add(name(q.i))}));
+  let t=same?'The two schedules are identical here: no task is released while a lower-priority one is running, so there is never anything to preempt.'
+    :`Non-preemptive: no preemptions, ${miss(simN)} missed deadline${miss(simN)===1?'':'s'}`+(blk.size?`; ${list([...blk])} ${blk.size>1?'were':'was'} blocked by lower-priority work.`:'.')+` Preemptive: <b>${simP.preempts}</b> preemption${simP.preempts===1?'':'s'}, ${miss(simP)} missed deadline${miss(simP)===1?'':'s'}.`;
+  if(!showAll&&cur<end)t='Step to the end, or show the schedule after t, to see the totals.';
+  if(!$('visP').checked||!$('visN').checked)t='';
+  $('summary').innerHTML=t;
+}
+function renderTime(){
+  $('time').max=end;$('time').value=cur;$('tnow').textContent='t = '+cur;
+  renderResults();
+  draw($('chartP'),simP,'P');draw($('chartN'),simN,'N');
+  $('narrP').innerHTML=describe(simP,cur,true);$('narrN').innerHTML=describe(simN,cur,false);
+  $('prev').disabled=cur<=0;$('next').disabled=cur>=end;
+  $('play').textContent=timer?'Pause':(cur>=end?'Replay':'Play');
+}
+function recompute(keepTime){
+  simP=simulate(true);simN=simulate(false);end=Math.max(simP.end,simN.end);
+  if(!keepTime)cur=0;cur=Math.min(cur,end);
+  renderResults();renderTime();
+}
+function renderEditor(){
+  $('rows').innerHTML=tasks.map((tk,i)=>`<tr>
+    <td><span class="sw" style="background:${col(i)}"></span>${name(i)}</td>
+    <td><input type="number" id="r-${i}" data-i="${i}" data-k="r" min="0" max="40" value="${tk.r}" aria-label="${name(i)} release time"></td>
+    <td><input type="number" id="c-${i}" data-i="${i}" data-k="c" min="1" max="20" value="${tk.c}" aria-label="${name(i)} execution time"></td>
+    <td><input type="number" id="p-${i}" data-i="${i}" data-k="p" min="1" max="9" value="${tk.p}" aria-label="${name(i)} priority"></td>
+    <td><input type="number" id="d-${i}" data-i="${i}" data-k="d" min="1" max="99" value="${tk.d==null?'':tk.d}" aria-label="${name(i)} relative deadline"></td>
+    <td><button class="x" data-del="${i}" aria-label="Remove ${name(i)}"${tasks.length<2?' disabled':''}>×</button></td></tr>`).join('');
+  $('add').disabled=tasks.length>=6;
+}
+const LIM={r:[0,40],c:[1,20],p:[1,9],d:[1,99]};
+$('rows').addEventListener('change',e=>{
+  const el=e.target;if(!el.dataset.k)return;
+  const k=el.dataset.k,i=+el.dataset.i,raw=el.value.trim();
+  let v;
+  if(k==='d'&&raw==='')v=null;
+  else{v=Math.round(Number(raw));if(!Number.isFinite(v))v=tasks[i][k];if(v!=null)v=Math.min(LIM[k][1],Math.max(LIM[k][0],v))}
+  tasks[i][k]=v;el.value=v==null?'':v;stop();recompute(true);
+});
+$('rows').addEventListener('click',e=>{
+  const b=e.target.closest('[data-del]');if(!b||tasks.length<2)return;
+  tasks.splice(+b.dataset.del,1);stop();renderEditor();recompute(false);
+});
+$('add').addEventListener('click',()=>{
+  if(tasks.length>=6)return;
+  const ps=tasks.map(t=>t.p);
+  tasks.push({r:0,c:2,p:lowIsHigh?Math.min(9,Math.max(...ps)+1):Math.max(1,Math.min(...ps)-1),d:null});
+  stop();renderEditor();recompute(false);
+});
+$('presets').addEventListener('click',e=>{
+  const b=e.target.closest('[data-preset]');if(!b)return;
+  tasks=PRESETS[b.dataset.preset].map(t=>({...t}));
+  if(!lowIsHigh){const m=Math.max(...tasks.map(t=>t.p))+1;tasks.forEach(t=>t.p=m-t.p)}
+  stop();renderEditor();recompute(false);
+});
+document.querySelectorAll('input[name=conv]').forEach(r=>r.addEventListener('change',()=>{
+  lowIsHigh=$('conv-low').checked;stop();recompute(false);
+}));
+$('showall').addEventListener('change',e=>{showAll=e.target.checked;renderTime()});
+function vis(){const w=document.querySelector('.wrap'),p=$('visP').checked,n=$('visN').checked;
+  w.classList.toggle('hideP',!p);w.classList.toggle('hideN',!n);$('nonevis').hidden=p||n;if(simP)renderTime()}
+$('visP').addEventListener('change',vis);$('visN').addEventListener('change',vis);
+function stop(){if(timer){clearInterval(timer);timer=null}}
+function go(t){cur=Math.min(end,Math.max(0,t));renderTime()}
+$('prev').addEventListener('click',()=>{stop();go(cur-1)});
+$('next').addEventListener('click',()=>{stop();go(cur+1)});
+$('time').addEventListener('input',e=>{stop();go(+e.target.value)});
+$('play').addEventListener('click',()=>{
+  if(timer){stop();renderTime();return}
+  if(cur>=end)cur=0;
+  timer=setInterval(()=>{if(cur>=end){stop();renderTime();return}go(cur+1)},800);
+  renderTime();
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.closest('input,button,label'))return;
+  if(e.key==='ArrowRight'){e.preventDefault();stop();go(cur+1)}
+  if(e.key==='ArrowLeft'){e.preventDefault();stop();go(cur-1)}
+});
+let lastW=0;
+new ResizeObserver(()=>{const w=$('stage').clientWidth;if(w!==lastW){lastW=w;if(simP)renderTime()}}).observe($('stage'));
+renderEditor();recompute(false);vis();
+})();
+</script>
+
+</body>
+</html>

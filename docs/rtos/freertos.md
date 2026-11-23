@@ -15,7 +15,7 @@ A task has a function, priority, stack and task control block. A context switch 
 | Blocked | Waiting for an event or timeout | Event or timeout → Ready |
 | Suspended | Explicitly excluded from scheduling | Explicit resume → Ready |
 
-A newly ready high-priority task can pre-empt a lower-priority task. A task unblocked by a timeout does not necessarily execute immediately: it must still win the scheduling decision. See the official [task-state definitions](https://www.freertos.org/Documentation/02-Kernel/02-Kernel-features/01-Tasks-and-co-routines/02-Task-states).
+A newly ready high-priority task can pre-empt a lower-priority task (compare the two policies in the [preemptive vs non-preemptive tutorial](../tutorials/preemptive-scheduling.md)). A task unblocked by a timeout does not necessarily execute immediately: it must still win the scheduling decision. See the official [task-state definitions](https://www.freertos.org/Documentation/02-Kernel/02-Kernel-features/01-Tasks-and-co-routines/02-Task-states).
 
 ## Choose the communication mechanism
 
