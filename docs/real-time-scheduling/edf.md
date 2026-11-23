@@ -67,7 +67,7 @@ The jump is safe because, for $h(t)\le s\le t$, monotonicity gives $h(s)\le h(t)
 
 For the lecture example, QPA evaluates $14,12,11,8,5,4,3$, then stops at 1. PDA evaluates eight deadline points; QPA evaluates seven points here. The saving depends on the task set, and can be much larger.
 
-Try the [PDA vs QPA explorer](../tutorials/pda-qpa.md) and compare the traces. Under overload, EDF alone does not determine which application functions should retain service; [mixed-criticality scheduling](../multicore-resource-sharing/mixed-criticality.md) introduces an explicit service policy.
+Try the [PDA vs QPA explorer](../tutorials/pda-qpa.md) and compare the traces. Under overload, EDF can produce a **domino effect**, in which one late job pushes many others past their deadlines; try the [EDF domino effect tutorial](../tutorials/edf-domino.md). EDF alone does not determine which application functions should retain service; [mixed-criticality scheduling](../multicore-resource-sharing/mixed-criticality.md) introduces an explicit service policy.
 
 ??? question "Check your understanding"
     Why does $h(3)=1$ in the example even though all three tasks may have released at time 0?

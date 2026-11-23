@@ -34,6 +34,8 @@ Current interactive tutorials:
 - [**Kernighan-Lin Algorithm**](../tutorials/kl-algorithm.md) — Step through the KL graph partitioning algorithm
 - [**Diffusion Load Balancing**](../tutorials/diffusion-algorithm.md) — Step through iterative load diffusion on a graph
 - [**PDA vs QPA**](../tutorials/pda-qpa.md) — Compare Processor Demand Analysis with Quick convergence Processor-demand Analysis
+- [**FPS Starvation**](../tutorials/fps-starvation.md) — Compare FPS, ageing and EDF when high-priority work keeps arriving
+- [**EDF Domino Effect**](../tutorials/edf-domino.md) — Replay the lecture's domino example and overload EDF, FPS and admission control
 
 ---
 
