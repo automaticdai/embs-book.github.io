@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FPS Starvation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --ink:#1C2430; --muted:#5A6676; --line:#D5DBE3; --soft:#E9EDF2;
+  --stage:#FFFFFF; --accent:#1E7B3A; --accent-ink:#FFFFFF; --miss:#C62828; --hit:#E6F2E9; --wait:#8A96A6;
+  --c1:#2F6FB0; --c2:#C8691C; --c3:#7A4FB5; --c4:#2E8C83; --c5:#B5487A; --c6:#6B7A2A;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+    --stage:#10151B; --accent:#6CC487; --accent-ink:#151A21; --miss:#FF6B6B; --hit:#203A2A; --wait:#7F8C9C;
+    --c1:#78AEE0; --c2:#E8A060; --c3:#B394E6; --c4:#5FC2B7; --c5:#E68AB3; --c6:#B5C46A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151A21; --surface:#1D242D; --ink:#E6EBF1; --muted:#9AA7B6; --line:#334050; --soft:#26303B;
+  --stage:#10151B; --accent:#6CC487; --accent-ink:#151A21; --miss:#FF6B6B; --hit:#203A2A; --wait:#7F8C9C;
+  --c1:#78AEE0; --c2:#E8A060; --c3:#B394E6; --c4:#5FC2B7; --c5:#E68AB3; --c6:#B5C46A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  font-size:17px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 36px}
+h1{font-size:clamp(25px,3.2vw,36px);line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:17px;margin:0 0 8px}
+.intro{margin:0 0 16px;color:var(--muted);max-width:78ch}
+.lab{font-size:14px;color:var(--muted);font-weight:700;margin:0 0 6px}
+.controls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end;margin-bottom:12px}
+.seg{display:inline-flex;flex-wrap:wrap;border:2px solid var(--accent);border-radius:9px;overflow:hidden}
+.seg label{cursor:pointer;font-size:15px;font-weight:700;color:var(--accent);position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label span{display:block;padding:6px 12px}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink)}
+.seg input:focus-visible+span{outline:3px solid var(--accent);outline-offset:-3px}
+button{font:inherit;font-size:15px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;border:2px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+button.secondary{background:transparent;color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.scdesc{margin:0 0 12px;color:var(--ink);max-width:90ch;min-height:1.5em}
+.card{background:var(--surface);border-radius:12px;padding:14px 16px}
+.gantt{overflow-x:auto;background:var(--stage);border-radius:12px;border:1px solid var(--line)}
+.gantt svg{display:block;min-width:620px;user-select:none;cursor:pointer}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px;color:var(--muted);margin:8px 2px 0}
+.legend svg{vertical-align:-3px;margin-right:4px}
+.player{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0 8px}
+.player input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+.player .tnow{font-weight:700;min-width:7ch}
+.narr{border-left:4px solid var(--accent);background:var(--surface);padding:10px 14px;border-radius:0 8px 8px 0;min-height:4.2em}
+.narr p{margin:0}
+.narr .bad{color:var(--miss);font-weight:700}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;margin-top:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-size:13px;font-weight:700;vertical-align:bottom}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+#cmp td:first-child{min-width:7.5em}
+td.bad{color:var(--miss);font-weight:700}
+tr.cur td{background:var(--hit)}
+tr.pick{cursor:pointer}
+tr.pick:hover td{background:var(--soft)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.meter{display:inline-block;width:64px;height:9px;border-radius:5px;background:var(--soft);margin-left:6px;vertical-align:0;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+.meter i.low{background:var(--miss)}
+.tablewrap{overflow-x:auto}
+.editor input[type=number]{font:inherit;font-size:15px;width:3.8em;padding:3px 5px;border:2px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);text-align:right}
+.editor input[type=text]{font:inherit;font-size:15px;width:4.4em;padding:3px 5px;border:2px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.editor input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.editor select{font:inherit;font-size:15px;padding:3px 5px;border:2px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.editor td{text-align:center}
+.editor td:first-child{text-align:left}
+.extras{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:12px;font-size:15px}
+.extras label{display:inline-flex;gap:6px;align-items:center}
+.note{color:var(--muted);font-size:14px;margin:8px 0 0}
+.err{color:var(--miss);font-size:14px;min-height:1.2em;margin-top:6px}
+.summary{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 8px;font-size:15px}
+.summary b{font-size:19px}
+.summary .bad b{color:var(--miss)}
+@media (max-width:640px){.wrap{padding:16px 16px 28px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="h1"></h1>
+  <p class="intro" id="intro"></p>
+
+  <div class="controls">
+    <div><p class="lab">Scenario</p><div class="seg" id="scen" role="radiogroup" aria-label="Scenario"></div></div>
+    <div><p class="lab">Scheduler</p><div class="seg" id="pol" role="radiogroup" aria-label="Scheduler"></div></div>
+    <div><p class="lab">A job that misses its deadline</p><div class="seg" id="missmode" role="radiogroup" aria-label="Late job handling">
+      <label><input type="radio" name="miss" value="continue" checked><span>keeps running</span></label>
+      <label><input type="radio" name="miss" value="abort"><span>is aborted</span></label>
+    </div></div>
+  </div>
+  <p class="scdesc" id="scdesc"></p>
+
+  <div class="gantt" id="ganttbox"><svg id="gantt" role="img" aria-label="Schedule chart"></svg></div>
+  <div class="legend" id="legend"></div>
+
+  <div class="player">
+    <button class="secondary" id="back" aria-label="Step back">&#9664; Step</button>
+    <button id="play">&#9654; Play</button>
+    <button class="secondary" id="fwd" aria-label="Step forward">Step &#9654;</button>
+    <input type="range" id="scrub" min="0" max="60" value="60" aria-label="Time shown">
+    <span class="tnow" id="tnow"></span>
+    <button class="secondary" id="all">Show all</button>
+  </div>
+  <div class="narr" aria-live="polite"><p id="narr"></p></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>What happened to each task</h2>
+      <div class="summary" id="summary"></div>
+      <div class="tablewrap"><table id="stats"></table></div>
+      <p class="note" id="statnote"></p>
+    </div>
+    <div class="card">
+      <h2>Same tasks, every scheduler</h2>
+      <div class="tablewrap"><table id="cmp"></table></div>
+      <p class="note">Click a row to switch to that scheduler.</p>
+    </div>
+  </div>
+
+  <div class="card editor" style="margin-top:18px">
+    <h2>Edit the task set</h2>
+    <div class="tablewrap"><table id="editor"></table></div>
+    <div class="extras" id="extras"></div>
+    <div class="err" id="err" role="alert"></div>
+    <p class="note">Times are whole units. T = 0 means the task releases a single job at its offset. Priority 1 is the highest; it is used only by the fixed-priority schedulers.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ===== single-processor preemptive scheduler, integer time ===== */
+/* tasks: [{name,O,C,T,D,P,burst:{from,to,every}|null,overrun:{job,extra}|null}]
+   T = 0 means the task releases one job only (at O).
+   opts: {policy:'edf'|'fps'|'aging'|'edfac', miss:'continue'|'abort', H, aging}  */
+function releasesOf(task,H){
+  var out=[], t;
+  if(!(task.T>0)){ if(task.O<H) out.push(task.O); return out; }
+  var b=task.burst;
+  for(t=task.O;t<H;t+=task.T){ if(!b||t<b.from||t>=b.to) out.push(t); }
+  if(b&&b.every>0){ for(t=Math.max(b.from,0);t<Math.min(b.to,H);t+=b.every) out.push(t); }
+  out.sort(function(a,b){return a-b;});
+  return out.filter(function(v,i,a){return i===0||a[i-1]!==v;});
+}
+function simulate(tasks,opts){
+  var H=opts.H, pol=opts.policy, A=Math.max(1,opts.aging||1);
+  var jobs=[], i, t;
+  tasks.forEach(function(tk,ti){
+    releasesOf(tk,H).forEach(function(r,k){
+      var c=tk.C+((tk.overrun&&tk.overrun.job===k)?tk.overrun.extra:0);
+      jobs.push({ti:ti,k:k,r:r,C:c,rem:c,d:r+tk.D,state:'future',finish:null,ran:0,over:c>tk.C});
+    });
+  });
+  jobs.sort(function(a,b){return a.r-b.r||a.ti-b.ti;});
+  var active=[], segs=[], log=[], waits=tasks.map(function(){return [];});
+  function effP(j,t){
+    var p=tasks[j.ti].P;
+    if(pol==='aging') p=Math.max(0,p-Math.floor((t-j.r)/A));
+    return p;
+  }
+  function better(a,b,t){
+    if(pol==='edf'||pol==='edfac'){ if(a.d!==b.d) return a.d<b.d; }
+    else { var pa=effP(a,t), pb=effP(b,t); if(pa!==pb) return pa<pb; }
+    if(a.r!==b.r) return a.r<b.r;
+    return a.ti<b.ti;
+  }
+  /* admission uses declared C: the scheduler cannot know a job will overrun */
+  function feasibleFlags(set,t){
+    var s=set.slice().sort(function(a,b){return a.d-b.d||a.r-b.r||a.ti-b.ti;}), cum=t, f=new Map();
+    s.forEach(function(j){ cum+=Math.max(1,tasks[j.ti].C-j.ran); f.set(j,cum<=j.d); });
+    return f;
+  }
+  var ji=0, cur=null;
+  for(t=0;t<H;t++){
+    var ev={t:t,rel:[],rej:[],abort:[],run:null,why:'',done:null,ready:[]};
+    while(ji<jobs.length&&jobs[ji].r===t){
+      var j=jobs[ji++];
+      if(pol==='edfac'){
+        var before=feasibleFlags(active,t), after=feasibleFlags(active.concat([j]),t), ok=after.get(j);
+        active.forEach(function(a){ if(before.get(a)&&!after.get(a)) ok=false; });
+        if(!ok){ j.state='rejected'; ev.rej.push(j); continue; }
+      }
+      j.state='ready'; active.push(j); ev.rel.push(j);
+    }
+    if(opts.miss==='abort'){
+      active=active.filter(function(a){
+        if(a.d<=t){ a.state='aborted'; ev.abort.push(a); return false; }
+        return true;
+      });
+    }
+    var best=null;
+    active.forEach(function(a){ if(!best||better(a,best,t)) best=a; });
+    ev.ready=active.slice();
+    if(best){
+      ev.run=best; ev.prev=cur; ev.effP=effP(best,t);
+      best.rem--; best.ran++;
+      var late=t+1>best.d;
+      var last=segs[segs.length-1];
+      if(last&&last.job===best&&last.end===t&&last.late===late) last.end=t+1;
+      else segs.push({ti:best.ti,job:best,start:t,end:t+1,late:late});
+      if(best.rem===0){
+        best.finish=t+1; best.state=best.finish>best.d?'late':'met'; ev.done=best;
+        active.splice(active.indexOf(best),1);
+      }
+      cur=best;
+    } else cur=null;
+    var waiting={};
+    ev.ready.forEach(function(a){ if(!best||a.ti!==best.ti) waiting[a.ti]=true; });
+    Object.keys(waiting).forEach(function(k){
+      var w=waits[k], l=w[w.length-1];
+      if(l&&l.end===t) l.end=t+1; else w.push({start:t,end:t+1});
+    });
+    log.push(ev);
+  }
+  /* jobs still unfinished at H */
+  jobs.forEach(function(j){ if(j.state==='ready') j.state=(j.d<H)?'pending-late':'pending'; if(j.state==='future') j.state='future'; });
+  var stats=tasks.map(function(tk,ti){
+    var s={rel:0,met:0,miss:0,aborted:0,rejected:0,pending:0,maxLate:0,maxResp:0,cpu:0,demand:0,longestWait:0,missedAny:false};
+    jobs.forEach(function(j){
+      if(j.ti!==ti) return;
+      s.rel++; s.demand+=j.C; s.cpu+=j.ran;
+      if(j.state==='met'){ s.met++; s.maxResp=Math.max(s.maxResp,j.finish-j.r); }
+      else if(j.state==='late'){ s.miss++; s.maxLate=Math.max(s.maxLate,j.finish-j.d); s.maxResp=Math.max(s.maxResp,j.finish-j.r); }
+      else if(j.state==='aborted'){ s.aborted++; s.miss++; }
+      else if(j.state==='rejected'){ s.rejected++; }
+      else if(j.state==='pending-late'){ s.pending++; s.miss++; s.maxLate=Math.max(s.maxLate,H-j.d); }
+      else if(j.state==='pending'){ s.pending++; }
+    });
+    waits[ti].forEach(function(w){ s.longestWait=Math.max(s.longestWait,w.end-w.start); });
+    s.missedAny=s.miss>0;
+    return s;
+  });
+  var tot={miss:0,tasksHit:0,maxLate:0,rejected:0,aborted:0,idle:0};
+  stats.forEach(function(s){ tot.miss+=s.miss; tot.tasksHit+=s.missedAny?1:0; tot.maxLate=Math.max(tot.maxLate,s.maxLate); tot.rejected+=s.rejected; tot.aborted+=s.aborted; });
+  log.forEach(function(e){ if(!e.run) tot.idle++; });
+  return {jobs:jobs,segs:segs,log:log,waits:waits,stats:stats,tot:tot,H:H};
+}
+
+
+var CONFIG={
+  title:'Starvation under fixed priorities',
+  intro:'A fixed-priority scheduler always runs the highest-priority ready job. If higher-priority jobs keep arriving, a low-priority task can wait indefinitely: it is <b>starved</b>. Pick a scenario and watch the hatched "waiting" bars of the lowest task, then compare with ageing and with EDF.',
+  policies:['fps','aging','edf'], defaultPolicy:'fps', extras:'burst', compare:['miss','hit','wait','share'],
+  scenarios:[
+    {label:'Higher priorities take everything',H:60,policy:'fps',miss:'continue',aging:4,
+     desc:'τ<sub>1</sub> and τ<sub>2</sub> together use exactly 100% of the processor and both meet every deadline. τ<sub>3</sub> is released every 10 units but, under FPS, never runs at all.',
+     tasks:[{name:'τ1',O:0,C:2,T:4,D:4,P:1},{name:'τ2',O:0,C:4,T:8,D:8,P:2},{name:'τ3',O:0,C:2,T:10,D:10,P:3}]},
+    {label:'Burst of arrivals',H:60,policy:'fps',miss:'continue',aging:4,burst:{task:0,from:12,to:36,every:2},
+     desc:'Normally U = 0.875 and every deadline is met. Between t = 12 and t = 36, τ<sub>1</sub> (think of an interrupt-driven handler) arrives every 2 units instead of every 8. During the burst, τ<sub>1</sub> and τ<sub>2</sub> need the whole processor, and τ<sub>3</sub> gets nothing until it ends.',
+     tasks:[{name:'τ1',O:0,C:1,T:8,D:8,P:1},{name:'τ2',O:0,C:2,T:4,D:4,P:2},{name:'τ3',O:0,C:2,T:8,D:8,P:3}]},
+    {label:'Slight overload',H:60,policy:'fps',miss:'continue',aging:4,
+     desc:'U = 1.15. Under FPS, τ<sub>3</sub> receives only the 10% of the processor that τ<sub>1</sub> and τ<sub>2</sub> leave idle, and its backlog grows without limit. EDF and ageing give τ<sub>3</sub> a fairer share, at the cost of misses in τ<sub>1</sub> and τ<sub>2</sub> (the EDF domino effect tutorial explores that side).',
+     tasks:[{name:'τ1',O:0,C:2,T:4,D:4,P:1},{name:'τ2',O:0,C:2,T:5,D:5,P:2},{name:'τ3',O:0,C:3,T:12,D:12,P:3}]}
+  ]
+};
+
+
+var COLORS=['--c1','--c2','--c3','--c4','--c5','--c6'];
+var POLNAME={edf:'EDF',fps:'FPS',aging:'FPS + ageing',edfac:'EDF + admission control'};
+var $=function(id){return document.getElementById(id);};
+var state={scen:null,tasks:[],H:48,policy:CONFIG.defaultPolicy,miss:'continue',overrun:{on:false,task:0,job:0,extra:0},burst:{on:false,task:0,from:0,to:0,every:2},aging:4,cur:48,res:null,timer:null};
+
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function nameHTML(n){var m=/^τ(.+)$/.exec(n);return m?'τ<sub>'+esc(m[1])+'</sub>':esc(n);}
+function nameSVG(n){var m=/^τ(.+)$/.exec(n);return m?'τ<tspan dy="4" font-size="0.75em">'+esc(m[1])+'</tspan>':esc(n);}
+function col(i){return 'var('+COLORS[i%COLORS.length]+')';}
+function jobName(j){var tk=state.tasks[state.active[j.ti]];return nameHTML(tk.name)+(tk.T>0?' job '+(j.k+1):'');}
+
+/* ---------- build the controls ---------- */
+$('h1').textContent=CONFIG.title; $('intro').innerHTML=CONFIG.intro;
+$('scen').innerHTML=CONFIG.scenarios.map(function(s,i){return '<label><input type="radio" name="scen" value="'+i+'"'+(i===0?' checked':'')+'><span>'+s.label+'</span></label>';}).join('');
+$('pol').innerHTML=CONFIG.policies.map(function(p){return '<label><input type="radio" name="pol" value="'+p+'"><span>'+POLNAME[p]+'</span></label>';}).join('');
+
+function setRadio(name,val){var el=document.querySelector('input[name="'+name+'"][value="'+val+'"]');if(el)el.checked=true;}
+
+function loadScenario(i){
+  var s=CONFIG.scenarios[i]; state.scen=i;
+  state.tasks=clone(s.tasks).map(function(t){if(t.on===undefined)t.on=true;return t;});
+  state.H=s.H;
+  state.overrun=s.overrun?Object.assign({on:true},clone(s.overrun)):{on:false,task:state.tasks.length-1,job:0,extra:3};
+  state.burst=s.burst?Object.assign({on:true},clone(s.burst)):{on:false,task:0,from:10,to:30,every:2};
+  if(s.aging) state.aging=s.aging;
+  if(s.policy){state.policy=s.policy;setRadio('pol',s.policy);}
+  if(s.miss){state.miss=s.miss;setRadio('miss',s.miss);}
+  $('scdesc').innerHTML=s.desc;
+  buildEditor(); run(true);
+}
+
+function buildEditor(){
+  var h='<thead><tr><th>Use</th><th>Task</th><th>Offset</th><th>C</th><th>T</th><th>D</th><th>Priority</th><th>U</th><th></th></tr></thead><tbody>';
+  state.tasks.forEach(function(t,i){
+    h+='<tr><td><input type="checkbox" data-i="'+i+'" data-f="on"'+(t.on?' checked':'')+' aria-label="Use task '+esc(t.name)+'"></td>'+
+      '<td><span class="sw" style="background:'+col(i)+'"></span><input type="text" data-i="'+i+'" data-f="name" value="'+esc(t.name)+'" aria-label="Task name"></td>'+
+      ['O','C','T','D','P'].map(function(f){return '<td><input type="number" step="1" min="'+(f==='O'||f==='T'?0:1)+'" data-i="'+i+'" data-f="'+f+'" value="'+t[f]+'" aria-label="'+f+' of '+esc(t.name)+'"></td>';}).join('')+
+      '<td class="u" data-i="'+i+'"></td>'+
+      '<td><button class="secondary" data-del="'+i+'" aria-label="Remove '+esc(t.name)+'"'+(state.tasks.length<=1?' disabled':'')+'>&times;</button></td></tr>';
+  });
+  h+='</tbody>';
+  $('editor').innerHTML=h;
+  var ex='<button class="secondary" id="addtask"'+(state.tasks.length>=6?' disabled':'')+'>+ Add task</button>'+
+    '<label>Time shown <input type="number" id="hor" min="8" max="120" step="1" value="'+state.H+'"></label>';
+  var opts=state.tasks.map(function(t,i){return '<option value="'+i+'">'+esc(t.name)+'</option>';}).join('');
+  if(CONFIG.extras==='overrun'){
+    var o=state.overrun;
+    ex+='<label><input type="checkbox" id="ovon"'+(o.on?' checked':'')+'> Overrun: job</label>'+
+      '<input type="number" id="ovjob" min="1" step="1" value="'+(o.job+1)+'" aria-label="Overrunning job number"> of <select id="ovtask" aria-label="Overrunning task">'+opts+'</select>'+
+      '<label>runs <input type="number" id="ovextra" min="0" step="1" value="'+o.extra+'"> units longer than C</label>';
+  }
+  if(CONFIG.extras==='burst'){
+    var b=state.burst;
+    ex+='<label><input type="checkbox" id="buon"'+(b.on?' checked':'')+'> Burst: </label><select id="butask" aria-label="Bursting task">'+opts+'</select>'+
+      '<label>arrives every <input type="number" id="buevery" min="1" step="1" value="'+b.every+'"></label>'+
+      '<label>from <input type="number" id="bufrom" min="0" step="1" value="'+b.from+'"></label>'+
+      '<label>to <input type="number" id="buto" min="0" step="1" value="'+b.to+'"></label>';
+  }
+  if(CONFIG.policies.indexOf('aging')>=0){
+    ex+='<label>Ageing: one priority level per <input type="number" id="agestep" min="1" step="1" value="'+state.aging+'"> units waited</label>';
+  }
+  $('extras').innerHTML=ex;
+  if($('ovtask')) $('ovtask').value=String(Math.min(state.overrun.task,state.tasks.length-1));
+  if($('butask')) $('butask').value=String(Math.min(state.burst.task,state.tasks.length-1));
+}
+
+function readEditor(){
+  var err='';
+  document.querySelectorAll('#editor input').forEach(function(el){
+    var i=+el.dataset.i, f=el.dataset.f, t=state.tasks[i];
+    if(f==='on') t.on=el.checked;
+    else if(f==='name') t.name=el.value.trim()||('τ'+(i+1));
+    else { var v=Math.round(Number(el.value)); var mn=(f==='O'||f==='T')?0:1;
+      if(!isFinite(v)||v<mn||v>999){err='Use whole numbers: C, D and priority at least 1; offset and T at least 0.';v=Math.max(mn,isFinite(v)?Math.min(v,999):mn);}
+      t[f]=v; }
+  });
+  var H=Math.round(Number($('hor').value)); if(!(H>=8&&H<=120)){err='Time shown must be between 8 and 120.';H=Math.max(8,Math.min(120,H||48));}
+  state.H=H;
+  if($('ovon')){ state.overrun={on:$('ovon').checked,task:+$('ovtask').value,job:Math.max(0,Math.round(+$('ovjob').value||1)-1),extra:Math.max(0,Math.round(+$('ovextra').value||0))}; }
+  if($('buon')){ state.burst={on:$('buon').checked,task:+$('butask').value,every:Math.max(1,Math.round(+$('buevery').value||1)),from:Math.max(0,Math.round(+$('bufrom').value||0)),to:Math.max(0,Math.round(+$('buto').value||0))}; }
+  if($('agestep')) state.aging=Math.max(1,Math.round(+$('agestep').value||1));
+  if(!state.tasks.some(function(t){return t.on;})) err='Select at least one task.';
+  $('err').textContent=err;
+}
+
+function simTasks(){
+  state.active=[];
+  return state.tasks.map(function(t,i){
+    if(!t.on) return null;
+    state.active.push(i);
+    return {name:t.name,O:t.O,C:t.C,T:t.T,D:t.D,P:t.P,
+      overrun:(state.overrun.on&&state.overrun.task===i&&state.overrun.extra>0)?{job:state.overrun.job,extra:state.overrun.extra}:null,
+      burst:(state.burst.on&&state.burst.task===i&&state.burst.to>state.burst.from)?{from:state.burst.from,to:state.burst.to,every:state.burst.every}:null};
+  }).filter(Boolean);
+}
+function simulateWith(policy){
+  return simulate(simTasks(),{policy:policy,miss:state.miss,H:state.H,aging:state.aging});
+}
+
+/* ---------- run + render ---------- */
+function run(resetCursor){
+  stop();
+  state.res=simulateWith(state.policy);
+  if(resetCursor||state.cur>state.H) state.cur=state.H;
+  $('scrub').max=state.H; $('scrub').value=state.cur;
+  var U=0; state.anyPeriodic=false; state.tasks.forEach(function(t,i){ var u=t.T>0?t.C/t.T:0; if(t.on){U+=u; if(t.T>0) state.anyPeriodic=true;}
+    var c=document.querySelector('td.u[data-i="'+i+'"]'); if(c) c.textContent=t.T>0?u.toFixed(2):'–'; });
+  state.U=U;
+  drawGantt(); drawStats(); drawCompare(); narrate();
+}
+
+var SVGNS='http://www.w3.org/2000/svg';
+function drawGantt(){
+  var r=state.res, H=r.H, tasks=simTasks(), n=tasks.length;
+  var W=Math.max(620,Math.round(($('ganttbox').clientWidth||1120)-2)), L=64, R=16, top=26, lane=50, bot=10, h=top+n*lane+bot;
+  var u=(W-L-R)/H, x=function(t){return L+t*u;};
+  var s='<defs>'+
+    '<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--stage)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--wait)" stroke-width="2.4"/></pattern>'+
+    '<pattern id="late" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="7" stroke="var(--miss)" stroke-width="3"/></pattern>'+
+    '<marker id="aup" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker>'+
+    '<marker id="adn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>'+
+    '<marker id="adnr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--miss)"/></marker>'+
+    '<marker id="arej" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--wait)"/></marker>'+
+    '</defs>';
+  var step=[1,2,5,10,20,50].find(function(k){return k*u>=30;})||50;
+  for(var t=0;t<=H;t++){
+    var major=t%step===0;
+    s+='<line x1="'+x(t)+'" y1="'+(top-4)+'" x2="'+x(t)+'" y2="'+(h-bot)+'" stroke="var(--line)" stroke-width="'+(major?1:0.5)+'" opacity="'+(major?0.9:0.5)+'"/>';
+    if(major) s+='<text x="'+x(t)+'" y="'+(top-9)+'" text-anchor="middle" font-size="13" fill="var(--muted)">'+t+'</text>';
+  }
+  tasks.forEach(function(tk,li){
+    var gi=state.active[li], y0=top+li*lane, base=y0+lane-10, c=col(gi);
+    if(tk.burst){
+      s+='<rect x="'+x(tk.burst.from)+'" y="'+(y0+2)+'" width="'+(x(Math.min(tk.burst.to,H))-x(tk.burst.from))+'" height="'+(lane-6)+'" fill="'+c+'" opacity="0.10"/>'+
+        '<text x="'+(x(tk.burst.from)+4)+'" y="'+(y0+13)+'" font-size="12" fill="var(--muted)">burst</text>';
+    }
+    s+='<line x1="'+L+'" y1="'+base+'" x2="'+(W-R)+'" y2="'+base+'" stroke="var(--muted)" stroke-width="1"/>';
+    s+='<text x="'+(L-12)+'" y="'+(base-8)+'" text-anchor="end" font-size="17" font-weight="700" fill="'+c+'">'+nameSVG(tk.name)+'</text>';
+    r.waits[li].forEach(function(w){
+      s+='<rect x="'+x(w.start)+'" y="'+(base-7)+'" width="'+(x(w.end)-x(w.start))+'" height="7" fill="url(#hatch)" opacity="0.9"><title>'+esc(tk.name)+' ready but waiting, '+w.start+'–'+w.end+'</title></rect>';
+    });
+  });
+  r.segs.forEach(function(g){
+    var li=g.ti, gi=state.active[li], y0=top+li*lane, base=y0+lane-10, c=col(gi), X=x(g.start), Wd=x(g.end)-X;
+    var tip=esc(tasks[li].name)+(tasks[li].T>0?' job '+(g.job.k+1):'')+' runs '+g.start+'–'+g.end+(g.late?' (after its deadline '+g.job.d+')':'');
+    s+='<rect x="'+X+'" y="'+(base-26)+'" width="'+Wd+'" height="26" fill="'+c+'" stroke="'+(g.late?'var(--miss)':'var(--stage)')+'" stroke-width="'+(g.late?2.5:1)+'"><title>'+tip+'</title></rect>';
+    if(g.late) s+='<rect x="'+X+'" y="'+(base-26)+'" width="'+Wd+'" height="26" fill="url(#late)" opacity="0.7" pointer-events="none"/>';
+  });
+  r.jobs.forEach(function(j){
+    var li=j.ti, tk=tasks[li], y0=top+li*lane, base=y0+lane-10, X=x(j.r);
+    if(j.state==='rejected'){
+      s+='<line x1="'+X+'" y1="'+base+'" x2="'+X+'" y2="'+(y0+6)+'" stroke="var(--wait)" stroke-width="2" stroke-dasharray="3 2" marker-end="url(#arej)"/>'+
+        '<text x="'+(X+5)+'" y="'+(y0+16)+'" font-size="12" font-weight="700" fill="var(--miss)">rejected</text>';
+    } else {
+      s+='<line x1="'+X+'" y1="'+base+'" x2="'+X+'" y2="'+(y0+6)+'" stroke="var(--ink)" stroke-width="1.8" marker-end="url(#aup)"/>';
+    }
+    if(j.over) s+='<text x="'+(X+5)+'" y="'+(y0+12)+'" font-size="12" font-weight="700" fill="var(--miss)">overrun +'+(j.C-tk.C)+'</text>';
+    var missed=j.state==='late'||j.state==='aborted'||j.state==='pending-late';
+    var showD=missed||!(tk.T>0)||tk.D!==tk.T;
+    if(j.d<=H&&showD&&j.state!=='rejected'){
+      var D=x(j.d);
+      s+='<line x1="'+D+'" y1="'+(y0+4)+'" x2="'+D+'" y2="'+(base-1)+'" stroke="'+(missed?'var(--miss)':'var(--muted)')+'" stroke-width="'+(missed?2.4:1.6)+'" marker-end="url('+(missed?'#adnr':'#adn')+')"/>';
+      if(missed) s+='<ellipse cx="'+D+'" cy="'+(base-lane/2+8)+'" rx="10" ry="'+(lane/2-3)+'" fill="none" stroke="var(--miss)" stroke-width="1.8" stroke-dasharray="4 3"><title>'+esc(tk.name)+' misses its deadline at '+j.d+'</title></ellipse>';
+      if(j.state==='aborted') s+='<text x="'+(D+4)+'" y="'+(base-30)+'" font-size="13" font-weight="700" fill="var(--miss)">✕</text>';
+    }
+  });
+  var cx=x(state.cur);
+  if(state.cur<H) s+='<rect x="'+cx+'" y="'+(top-4)+'" width="'+(W-R-cx+R)+'" height="'+(h-top+4)+'" fill="var(--stage)" opacity="0.82" pointer-events="none"/>';
+  s+='<line x1="'+cx+'" y1="'+(top-6)+'" x2="'+cx+'" y2="'+(h-bot+2)+'" stroke="var(--accent)" stroke-width="2.5" pointer-events="none"/>';
+  s+='<rect id="hit" x="'+L+'" y="0" width="'+(W-L-R)+'" height="'+h+'" fill="transparent"/>';
+  var svg=$('gantt'); svg.setAttribute('viewBox','0 0 '+W+' '+h); svg.setAttribute('width',W); svg.setAttribute('height',h); svg.innerHTML=s;
+  svg.setAttribute('aria-label','Schedule chart, '+r.tot.miss+' deadline misses in '+H+' time units under '+POLNAME[state.policy]);
+  svg.dataset.L=L; svg.dataset.u=u; svg.dataset.W=W;
+}
+
+$('gantt').addEventListener('click',function(e){
+  var svg=$('gantt'), pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
+  var p=pt.matrixTransform(svg.getScreenCTM().inverse());
+  var t=Math.floor((p.x-(+svg.dataset.L))/(+svg.dataset.u));
+  if(t<0||t>=state.H) return;
+  stop(); state.cur=t+1; $('scrub').value=state.cur; drawGantt(); narrate();
+});
+
+function fmtList(arr){return arr.length<=1?arr.join(''):arr.slice(0,-1).join(', ')+' and '+arr[arr.length-1];}
+function narrate(){
+  var r=state.res, H=r.H;
+  $('tnow').textContent='t = '+state.cur;
+  if(state.cur===0){ $('narr').innerHTML='Time 0, before anything runs. Press <b>Play</b> or <b>Step</b> to watch the scheduler make each decision.'; return; }
+  var e=r.log[state.cur-1], parts=[], t=e.t, pol=state.policy;
+  if(e.rel.length) parts.push(fmtList(e.rel.map(function(j){return jobName(j)+' released (deadline '+j.d+(j.over?', will overrun':'')+')';}))+'.');
+  e.rej.forEach(function(j){parts.push('<span class="bad">'+jobName(j)+' rejected:</span> admitting it would make an accepted job miss its deadline.');});
+  e.abort.forEach(function(j){parts.push('<span class="bad">'+jobName(j)+' aborted</span> at its deadline with '+j.rem+' unit'+(j.rem===1?'':'s')+' unfinished.');});
+  r.jobs.forEach(function(j){ if(state.miss==='continue'&&j.d===t&&j.r<t&&(j.finish===null||j.finish>t)&&j.state!=='rejected') parts.push('<span class="bad">'+jobName(j)+' misses its deadline</span> and keeps running.'); });
+  if(!e.run) parts.push('No job is ready, so the processor is idle.');
+  else {
+    var j=e.run, seen={}, extra={}, others=[];
+    e.ready.forEach(function(a){ if(a===j) return; if(seen[a.ti]){extra[a.ti]++;return;} seen[a.ti]=true; extra[a.ti]=0; others.push(a); });
+    var more=function(a){return extra[a.ti]?' plus '+extra[a.ti]+' later job'+(extra[a.ti]>1?'s':''):'';};
+    var why;
+    if(pol==='edf'||pol==='edfac'){
+      why='its absolute deadline '+j.d+' is the earliest'+(others.length?' (waiting: '+others.map(function(a){return jobName(a)+' d = '+a.d+more(a);}).join(', ')+')':'')+'.';
+    } else if(pol==='fps'){
+      why='it has the highest priority ('+state.tasks[state.active[j.ti]].P+') among ready jobs'+(others.length?' (waiting: '+others.map(function(a){return jobName(a)+' P = '+state.tasks[state.active[a.ti]].P+more(a);}).join(', ')+')':'')+'.';
+    } else {
+      var base=state.tasks[state.active[j.ti]].P;
+      why='its effective priority is '+e.effP+(e.effP<base?' (base '+base+', raised after waiting '+(t-j.r)+' units)':'')+(others.length?'; waiting: '+others.map(function(a){var p=Math.max(0,state.tasks[state.active[a.ti]].P-Math.floor((t-a.r)/state.aging));return jobName(a)+' P = '+p+more(a);}).join(', '):'')+'.';
+    }
+    parts.push((e.prev&&e.prev!==j&&e.prev.rem>0?'Preempts '+jobName(e.prev)+'. ':'')+'Runs '+jobName(j)+': '+why);
+    if(e.done) parts.push(e.done.finish>e.done.d?'<span class="bad">'+jobName(e.done)+' finishes at '+e.done.finish+', '+(e.done.finish-e.done.d)+' late.</span>':jobName(e.done)+' finishes at '+e.done.finish+', on time.');
+  }
+  $('narr').innerHTML='<b>'+t+'–'+(t+1)+':</b> '+parts.join(' ');
+}
+
+function drawStats(){
+  var r=state.res, tasks=simTasks(), tot=r.tot;
+  var sh='<span'+(tot.miss?' class="bad"':'')+'><b>'+tot.miss+'</b> deadline miss'+(tot.miss===1?'':'es')+'</span>'+
+    '<span'+(tot.tasksHit?' class="bad"':'')+'><b>'+tot.tasksHit+'</b> of '+tasks.length+' tasks affected</span>'+
+    (state.anyPeriodic?'<span>utilisation <b>'+state.U.toFixed(2)+'</b>'+(state.burst.on&&CONFIG.extras==='burst'?' outside the burst':'')+'</span>':'');
+  if(tot.rejected) sh+='<span><b>'+tot.rejected+'</b> rejected</span>';
+  $('summary').innerHTML=sh;
+  var h='<thead><tr><th>Task</th><th>Jobs</th><th>On time</th><th>Missed</th><th>Max<br>lateness</th><th>Longest<br>wait</th><th>CPU received<br>/ needed</th></tr></thead><tbody>';
+  r.stats.forEach(function(s,li){
+    var gi=state.active[li], share=s.demand?s.cpu/s.demand:1;
+    h+='<tr><td><span class="sw" style="background:'+col(gi)+'"></span>'+nameHTML(tasks[li].name)+'</td><td>'+s.rel+'</td><td>'+s.met+'</td>'+
+      '<td'+(s.miss?' class="bad"':'')+'>'+s.miss+(s.aborted?' ('+s.aborted+' aborted)':'')+(s.rejected?' +'+s.rejected+' rej.':'')+'</td>'+
+      '<td'+(s.maxLate?' class="bad"':'')+'>'+(s.maxLate||'–')+'</td><td>'+s.longestWait+'</td>'+
+      '<td>'+s.cpu+' / '+s.demand+'<span class="meter" aria-hidden="true"><i class="'+(share<0.75?'low':'')+'" style="width:'+Math.round(share*100)+'%"></i></span></td></tr>';
+  });
+  $('stats').innerHTML=h+'</tbody>';
+  $('statnote').textContent='Longest wait: the longest stretch during which the task had a ready job but was not running. Jobs still unfinished at t = '+r.H+' count as missed once their deadline has passed.';
+}
+
+function drawCompare(){
+  var cols=CONFIG.compare;
+  var head={miss:'Missed',hit:'Tasks<br>hit',late:'Max<br>lateness',rej:'Rejected',wait:'Longest<br>wait',share:'Lowest<br>CPU share'};
+  var h='<thead><tr><th>Scheduler</th>'+cols.map(function(c){return '<th>'+head[c]+'</th>';}).join('')+'</tr></thead><tbody>';
+  CONFIG.policies.forEach(function(p){
+    var r=simulateWith(p), t=r.tot;
+    var wait=0, share=1; r.stats.forEach(function(s){wait=Math.max(wait,s.longestWait); if(s.demand) share=Math.min(share,s.cpu/s.demand);});
+    var v={miss:t.miss,hit:t.tasksHit,late:t.maxLate||'–',rej:t.rejected,wait:wait,share:Math.round(share*100)+'%'};
+    var bad={miss:t.miss>0,hit:t.tasksHit>0,late:t.maxLate>0,rej:false,wait:false,share:share<0.75};
+    h+='<tr class="pick'+(p===state.policy?' cur':'')+'" data-p="'+p+'" tabindex="0"><td>'+POLNAME[p]+'</td>'+cols.map(function(c){return '<td'+(bad[c]?' class="bad"':'')+'>'+v[c]+'</td>';}).join('')+'</tr>';
+  });
+  $('cmp').innerHTML=h+'</tbody>';
+}
+function pickPolicy(p){ state.policy=p; setRadio('pol',p); run(false); }
+$('cmp').addEventListener('click',function(e){var tr=e.target.closest('tr[data-p]'); if(tr) pickPolicy(tr.dataset.p);});
+$('cmp').addEventListener('keydown',function(e){var tr=e.target.closest('tr[data-p]'); if(tr&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pickPolicy(tr.dataset.p);}});
+
+/* legend */
+(function(){
+  var sw=function(inner){return '<svg width="26" height="16" aria-hidden="true">'+inner+'</svg>';};
+  $('legend').innerHTML=
+    '<span>'+sw('<rect x="1" y="2" width="24" height="12" fill="var(--c1)"/>')+'running</span>'+
+    '<span>'+sw('<rect x="1" y="2" width="24" height="12" fill="var(--c1)" stroke="var(--miss)" stroke-width="2"/><rect x="1" y="2" width="24" height="12" fill="url(#late)" opacity=".7"/>')+'running after its deadline</span>'+
+    '<span>'+sw('<rect x="1" y="6" width="24" height="6" fill="url(#hatch)"/>')+'ready but waiting</span>'+
+    '<span>'+sw('<line x1="13" y1="15" x2="13" y2="3" stroke="var(--ink)" stroke-width="2"/><path d="M9,5 L13,0 L17,5z" fill="var(--ink)"/>')+'release</span>'+
+    '<span>'+sw('<line x1="13" y1="1" x2="13" y2="12" stroke="var(--muted)" stroke-width="2"/><path d="M9,11 L13,16 L17,11z" fill="var(--muted)"/>')+'deadline (shown when D ≠ T)</span>'+
+    '<span>'+sw('<ellipse cx="13" cy="8" rx="7" ry="7" fill="none" stroke="var(--miss)" stroke-width="1.8" stroke-dasharray="3 2"/>')+'missed deadline</span>';
+})();
+
+/* ---------- player ---------- */
+function stop(){ if(state.timer){clearInterval(state.timer);state.timer=null;} $('play').innerHTML='&#9654; Play'; }
+function setCur(c){ state.cur=Math.max(0,Math.min(state.H,c)); $('scrub').value=state.cur; drawGantt(); narrate(); }
+$('play').addEventListener('click',function(){
+  if(state.timer){stop();return;}
+  if(state.cur>=state.H) setCur(0);
+  $('play').innerHTML='&#10074;&#10074; Pause';
+  state.timer=setInterval(function(){ if(state.cur>=state.H){stop();return;} setCur(state.cur+1); }, state.H>60?160:300);
+});
+$('fwd').addEventListener('click',function(){stop();setCur(state.cur+1);});
+$('back').addEventListener('click',function(){stop();setCur(state.cur-1);});
+$('all').addEventListener('click',function(){stop();setCur(state.H);});
+$('scrub').addEventListener('input',function(){stop();setCur(+this.value);});
+document.addEventListener('keydown',function(e){
+  if(e.target.closest('input,select,textarea,button,tr[data-p]')) return;
+  if(e.key===' '){e.preventDefault();$('play').click();}
+  else if(e.key==='ArrowRight'){stop();setCur(state.cur+1);}
+  else if(e.key==='ArrowLeft'){stop();setCur(state.cur-1);}
+});
+
+/* ---------- inputs ---------- */
+$('scen').addEventListener('change',function(e){loadScenario(+e.target.value);});
+$('pol').addEventListener('change',function(e){state.policy=e.target.value;run(false);});
+$('missmode').addEventListener('change',function(e){state.miss=e.target.value;run(false);});
+var deb=null;
+function edited(){ clearTimeout(deb); deb=setTimeout(function(){readEditor();run(false);},120); }
+document.querySelector('.editor').addEventListener('input',function(e){
+  edited();
+});
+document.querySelector('.editor').addEventListener('change',function(e){
+  if(e.target.matches('input[type=text]')){ readEditor(); buildEditor(); run(false); }
+});
+document.querySelector('.editor').addEventListener('click',function(e){
+  var del=e.target.closest('button[data-del]');
+  if(del){ readEditor(); var i=+del.dataset.del; state.tasks.splice(i,1);
+    if(state.overrun.task>=state.tasks.length) state.overrun.task=state.tasks.length-1;
+    if(state.burst.task>=state.tasks.length) state.burst.task=0;
+    buildEditor(); run(false); return; }
+  if(e.target.id==='addtask'){ readEditor(); var n=state.tasks.length;
+    var used=state.tasks.map(function(t){return t.name;}), k=n+1; while(used.indexOf('τ'+k)>=0) k++;
+    state.tasks.push({name:'τ'+k,O:0,C:1,T:10,D:10,P:n+1,on:true}); buildEditor(); run(false); }
+});
+
+var lastW=0; window.addEventListener('resize',function(){var w=$('ganttbox').clientWidth; if(w!==lastW&&state.res){lastW=w;drawGantt();}});
+setRadio('pol',state.policy);
+loadScenario(0);
+})();
+</script>
+</body>
+</html>

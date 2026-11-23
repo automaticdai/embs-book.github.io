@@ -116,4 +116,6 @@ nav:
     - Kernighan–Lin Algorithm: tutorials/kl-algorithm.md
     - Diffusion Load Balancing: tutorials/diffusion-algorithm.md
     - PDA vs QPA: tutorials/pda-qpa.md
+    - FPS Starvation: tutorials/fps-starvation.md
+    - EDF Domino Effect: tutorials/edf-domino.md
   - Practicals: https://iangray001.github.io/embs/docs/practicals/

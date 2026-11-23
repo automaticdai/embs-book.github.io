@@ -70,6 +70,10 @@ Start at $C_i+B_i$. Deriving $B_i$ requires the [resource access protocol](../mu
 
 **Audsley's priority assignment** works from the lowest unassigned priority upward. Test each remaining task at that priority with all other unassigned tasks above it; fix a passing task there and repeat. Its optimality requires a compatible schedulability test, including independence from the relative order of higher-priority tasks. A failed attempt to find any candidate rejects all assignments only when those conditions hold.
 
+## Overload and starvation
+
+Under overload, FPS is more predictable than EDF: the lowest-priority tasks miss their deadlines first and higher-priority tasks are unaffected. The price is **starvation**. If higher-priority tasks keep arriving, a low-priority task can be denied the processor for long periods. When $\sum_{j\in hp(i)}U_j\ge1$, the response-time iteration for $\tau_i$ does not converge and the task may never run. Dynamic-priority scheduling suffers less from starvation, but under overload it can spread misses across every task. Explore both effects in the [FPS starvation](../tutorials/fps-starvation.md) and [EDF domino effect](../tutorials/edf-domino.md) tutorials.
+
 ??? question "Check your understanding"
     Keep the priorities and costs of task set D, but reduce c's deadline to 17. Does it pass this fixed-priority assignment?
 

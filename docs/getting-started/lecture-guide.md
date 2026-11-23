@@ -25,8 +25,8 @@ Use this guide to find the book chapters that accompany each lecture. Lecture nu
 | 11 | Embedded Software Design | [Compilation, WCET, execution structures and customisation](../rtos/embedded-software.md) |
 | 12 | Real-Time Operating Systems | [RTOS mechanisms](../rtos/introduction.md) and [FreeRTOS tasks, communication and memory](../rtos/freertos.md) |
 | 13 | Real-Time Systems | [Task models, notation and schedulability tests](../real-time-scheduling/introduction.md) |
-| 14 | FPS | [Priority assignment and response-time analysis](../real-time-scheduling/fixed-priority.md) |
-| 15 | EDF | [Processor demand, PDA and QPA](../real-time-scheduling/edf.md), then the [PDA/QPA explorer](../tutorials/pda-qpa.md) |
+| 14 | FPS | [Priority assignment and response-time analysis](../real-time-scheduling/fixed-priority.md), then the [starvation tutorial](../tutorials/fps-starvation.md) |
+| 15 | EDF | [Processor demand, PDA and QPA](../real-time-scheduling/edf.md), then the [PDA/QPA explorer](../tutorials/pda-qpa.md) and the [domino effect tutorial](../tutorials/edf-domino.md) |
 | 16 | Resource Sharing | [Priority inversion, inheritance and ceiling protocols](../multicore-resource-sharing/resource-sharing.md) |
 | 17 | Multicore Scheduling | [Global, partitioned and semi-partitioned scheduling](../multicore-resource-sharing/multicore.md) |
 | 18 | Mixed-criticality Systems | [Execution budgets, mode changes and response-time bounds](../multicore-resource-sharing/mixed-criticality.md) |
